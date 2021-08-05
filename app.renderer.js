@@ -135,7 +135,9 @@ Subtitler.Renderer.render = function( line, options ) {
 	var transform = [];
 	
 	var alignment = style.alignment;
-	if(captionsMode) {
+	if(captionsMode
+			&& alignment != Subtitler.Styles.Alignments.BOTTOM
+			&& alignment != Subtitler.Styles.Alignments.TOP) {
 		alignment = Subtitler.Styles.Alignments.BOTTOM;
 	}
 	if(!ignorePositioning) {
@@ -254,7 +256,7 @@ Subtitler.Renderer.render = function( line, options ) {
 			if(!captionsMode) {
 				textOutline.style.backgroundColor = style.colourOutline.toRGBA();
 				textOutline.style.padding = (Math.max(0, style.outlineWidth) * renderScale) + 'px';
-				textOutline.style.marginTop = '-' + (Math.max(0, style.outlineWidth) * renderScale) + 	'px';
+				textOutline.style.marginTop = '-' + (Math.max(0, style.outlineWidth) * renderScale) + 'px';
 				textOutline.style.marginLeft = '-' + (Math.max(0, style.outlineWidth) * renderScale) + 'px';
 			}
 			else {

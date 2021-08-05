@@ -14,6 +14,9 @@ Subtitler.Importer.load = function( contents, format, filename ) {
 	if(format == Subtitler.FileTypes.VTT) {
 		return Subtitler.Importer.fromVTT(contents, false, filename);
 	}
+	if(format == Subtitler.FileTypes.YTT) {
+		return Subtitler.Importer.fromYTT(contents, false, filename);
+	}
 	if(format == Subtitler.FileTypes.JSON) {
 		return Subtitler.Importer.fromJSON(contents, false, filename);
 	}
@@ -24,6 +27,11 @@ Subtitler.Importer.load = function( contents, format, filename ) {
 	}
 	
 	json = Subtitler.Importer.__parseSBV(contents);
+	if(!json.fatalErrors) {
+		return Subtitler.Importer.fromJSON(json, false, filename);
+	}
+	
+	json = Subtitler.Importer.__parseCustomFormat(contents);
 	if(!json.fatalErrors) {
 		return Subtitler.Importer.fromJSON(json, false, filename);
 	}
@@ -66,6 +74,10 @@ Subtitler.Importer.fromASS = function( ass, strict, filename ) {
 
 Subtitler.Importer.fromVTT = function( vtt, strict, filename ) {
 	var json = Subtitler.Importer.__parseVTT(vtt, strict);
+	return Subtitler.Importer.fromJSON(json, strict, filename);
+}
+Subtitler.Importer.fromYTT = function( ytt, strict, filename ) {
+	var json = Subtitler.Importer.__parseYTT(ytt, strict);
 	return Subtitler.Importer.fromJSON(json, strict, filename);
 }
 
@@ -1394,6 +1406,209 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 	return subtitles;
 }
 
+Subtitler.Importer.__parseCustomFormat = function( filecontents ) {
+	// a simplistic format
+	
+	// OPTIONAL:
+	// 		AT LEAST ONE:
+	//			header line
+	// 		empty line
+	
+	// AT LEAST ONE:
+	//		start time (optional end time)
+	//		line
+	
+	// In the event the end time is missing, the end time will be assumed to be the start of the next line, or 7cps, whichever's sooner
+	
+	var State = {
+		ExpectHeaderOrFirstLineTiming: 0,
+		ExpectHeaderOrEmptyLine: 1,
+		ExpectLineTiming: 2,
+		ExpectLineText: 3,
+		ExpectLineTextOrEmptyLine: 4
+	};
+	
+	var lines = [ ];
+	var filelines = filecontents.split(/(?:\r\n|\n|\r)/);
+	
+	var subtitles = {
+		lines: [ ],
+		styles: [ ],
+		info: [ ]
+	};
+	
+	var timeRegex = /^\s*(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?(?:\s*-?->?\s*(?:(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?))?(?:\s+°+)?\s*$/;
+	
+	var parserState = State.ExpectHeaderOrFirstLineTiming;
+	
+	var headers = [ ];
+	
+	var lineStart = 0;
+	var lineEnd = null;
+	var lineText = '';
+	
+	
+	for(var n=0; n<filelines.length; n++) {
+		
+		var fileline = filelines[n];
+		
+		if(parserState == State.ExpectHeaderOrFirstLineTiming) {
+			if(fileline == '') {
+				continue;
+			}
+			else if(timeRegex.test(fileline)) {
+				parserState = State.ExpectLineTiming;
+				n -= 1;
+				continue;
+			}
+			else {
+				headers.push(fileline);
+				continue;
+			}
+		}
+		else if(parserState == State.ExpectHeaderOrEmptyLine) {
+			if(fileline == '') {
+				parserState = State.ExpectHeaderOrFirstLineTiming;
+				continue;
+			}
+			else {
+				headers.push(fileline);
+				continue;
+			}
+		}
+		else if(parserState == State.ExpectLineTiming) {
+			if(fileline == '') {
+				continue;
+			}
+			else if(timeRegex.test(fileline)) {
+				if(headers.length > 0) {
+					for(var h=0; h<headers.length; h++) {
+						var line = { 
+							text_src: headers[h],
+							start: 0,
+							end: 0,
+							isComment: true
+						};
+						subtitles.lines.push(line);
+					}
+					headers = [ ];
+				}
+				var group = fileline.match(timeRegex);
+				
+				var startHours = (group[1] || '0') * 1;
+				var startMinutes = group[2] * 1;
+				var startSeconds = group[3] * 1;
+				var startMilliseconds = Math.round(('0.' + (group[4] || '0')) * 1000);
+				lineStart = (startHours * 3600) + (startMinutes * 60) + startSeconds + (startMilliseconds / 1000);
+				
+				if(group[7]) {
+					var endHours = (group[5] || '0') * 1;
+					var endMinutes = group[6] * 1;
+					var endSeconds = group[7] * 1;
+					var endMilliseconds = Math.round(('0.' + (group[8] || '0')) * 1000);
+					lineEnd = (endHours * 3600) + (endMinutes * 60) + endSeconds + (endMilliseconds / 1000);
+				}
+				else {
+					lineEnd = null;
+				}
+				
+				lineText = '';
+				
+				parserState = State.ExpectLineText;
+				continue;
+			}
+			else {
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected Line Timing but got "' + fileline + '", treating as comment'
+				);
+				var line = { 
+					text_src: fileline,
+					start: null,
+					end: null,
+					isComment: true
+				};
+				subtitles.lines.push(line);
+				continue;
+			}
+		}
+		else if(parserState == State.ExpectLineText) {
+			if(fileline == '') {
+				continue;
+			}
+			else {
+				lineText += ((lineText != '') ? '\\N' : '') + fileline;
+				parserState = State.ExpectLineTextOrEmptyLine;
+			}
+			continue;
+		}
+		else if(parserState == State.ExpectLineTextOrEmptyLine) {
+			if(fileline == '') {
+				var line = { 
+					text_src: lineText,
+					start: lineStart,
+					end: lineEnd
+				};
+				subtitles.lines.push(line);
+				lineText = '';
+				lineStart = null;
+				lineEnd = null;
+				parserState = State.ExpectLineTiming;
+				continue;
+			}
+			else {
+				lineText += ((lineText != '') ? '\\N' : '') + fileline;
+				parserState = State.ExpectLineTextOrEmptyLine;
+				continue;
+			}
+		}
+	}
+	if(lineText) {
+		var line = { 
+			text_src: lineText,
+			start: null,
+			end: null
+		};
+		subtitles.lines.push(line);
+	}
+	if(subtitles.lines.length == 0) {
+		subtitles.fatalErrors = subtitles.fatalErrors || [ 'File not in expected format' ]
+	}
+	else {
+		var comments = 0;
+		for(var n=0; n<subtitles.lines.length; n++) {
+			var previousLine = subtitles.lines[n-1] || null;
+			var line = subtitles.lines[n];
+			var nextLine = subtitles.lines[n+1] || null;
+			if(line.isComment) {
+				comments += 1;
+			}
+			if(line.start == null) {
+				line.start = (previousLine == null) ? 0 : previousLine.end;
+			}
+			if(line.end == null) {
+				if(line.isComment) {
+					line.end = line.start;
+				}
+				else {
+					var estimatedDuration = line.text_src.length / 8;
+					if(estimatedDuration < 2) {
+						estimatedDuration = 2;
+					}
+					if(nextLine && (nextLine.start != null) && nextLine.start < (line.start + estimatedDuration)) {
+						estimatedDuration = nextLine.start - line.start;
+					}
+					line.end = line.start + estimatedDuration;
+				}
+			}
+		}
+		if(comments > 5 && comments > (subtitles.lines.length * 0.25)) {
+			subtitles.fatalErrors = subtitles.fatalErrors || [ 'File not in expected format' ]
+		}
+	}
+	return subtitles;
+}
+
 Subtitler.Importer.__parseUnknown = function( filecontents ) {
 	
 	// no idea what it is, just interpret every line in the file as a line
@@ -1418,4 +1633,349 @@ Subtitler.Importer.__parseUnknown = function( filecontents ) {
 Subtitler.Importer.__parseVTT = function( filecontents ) {
 	// TODO
 	return Subtitler.Importer.__parseUnknown(filecontents);
+}
+
+Subtitler.Importer.__parseYTT = function( filecontents ) {
+	parser = new DOMParser();
+	var xmlDoc = null;
+	try {
+		xmlDoc = parser.parseFromString(filecontents, "text/xml");
+	}
+	catch(e) {
+		// pass
+	}
+	if(xmlDoc == null) {
+		return { fatalErrors: [ 'File contents not valid xml' ], errors: [ 'File contents not valid xml' ] }
+	}
+	
+	var valid_pen_attributes = [
+		'id', 'b', 'i', 'u',
+		'fc', 'fo', 'bo', 'ec',
+		'et', 'fs', 'sz', 'rb',
+		'of', 'te'
+	];
+	
+	var pens = { };
+	var pen_array = xmlDoc.querySelectorAll('timedtext head pen');
+	for(var p=0; p<pen_array.length; p++) {
+		var pen_element = pen_array[p];
+		var pen_object = { };
+		var attributeNames = pen_element.getAttributeNames();
+		for(var a=0; a<attributeNames.length; a++) {
+			if(valid_pen_attributes.indexOf(attributeNames[a]) == -1) {
+				// TODO - log error
+				continue;
+			}
+			pen_object[attributeNames[a]] = pen_element.getAttribute(attributeNames[a]);
+		}
+		pens[pen_object.id] = pen_object;
+	}
+	
+	var valid_ws_attributes = [ 'id', 'ju', 'pd', 'sd' ];
+	
+	var alignments = { };
+	var ws_array = xmlDoc.querySelectorAll('timedtext head ws');
+	for(var ws=0; ws<ws_array.length; ws++) {
+		var ws_element = ws_array[ws];
+		var alignment_object = { };
+		var attributeNames = ws_element.getAttributeNames();
+		for(var a=0; a<attributeNames.length; a++) {
+			if(valid_ws_attributes.indexOf(attributeNames[a]) == -1) {
+				// TODO - log error
+				continue;
+			}
+			alignment_object[attributeNames[a]] = ws_element.getAttribute(attributeNames[a]);
+		}
+		alignments[alignment_object.id] = alignment_object;
+	}
+	
+	var valid_wp_attributes = [ 'id', 'ap', 'ah', 'av' ];
+	
+	var positionings = { };
+	var wp_array = xmlDoc.querySelectorAll('timedtext head wp');
+	for(var wp=0; wp<wp_array.length; wp++) {
+		var wp_element = wp_array[wp];
+		var positioning_object = { };
+		var attributeNames = wp_element.getAttributeNames();
+		for(var a=0; a<attributeNames.length; a++) {
+			if(valid_wp_attributes.indexOf(attributeNames[a]) == -1) {
+				// TODO - log error
+				continue;
+			}
+			positioning_object[attributeNames[a]] = wp_element.getAttribute(attributeNames[a]);
+		}
+		positionings[positioning_object.id] = positioning_object;
+	}
+	
+	
+	var styles = { };
+	
+	function getStyleName( p, ws, wp ) {
+		var styleName = '';
+		if(wp != null) {
+			if(styleName) {
+				styleName += '_';
+			}
+			styleName += 'WP' + wp;
+		}
+		if(ws != null) {
+			if(styleName) {
+				styleName += '_';
+			}
+			styleName += 'WS' + ws;
+		}
+		if(styleName == '') {
+			styleName = 'Default';
+		}
+		if(p != null) {
+			if(styleName) {
+				styleName += '_';
+			}
+			styleName += 'P' + p;
+		}
+		return styleName;
+	}
+	
+	function getOrCreateStyle( p, ws, wp ) {
+		var styleName = getStyleName(p, ws, wp);
+		if(styles[styleName]) {
+			return styles[styleName];
+		}
+		return createStyle( pens[p], (ws == null ? ws : alignments[ws]), (wp == null ? null : positionings[wp]) );
+	}
+	
+	function createStyle( pen, alignment, positioning ) {
+		var styleName = getStyleName( (pen ? pen.id : null), (alignment ? alignment.id : null), (positioning ? positioning.id : null) );
+		var style = {
+			name: styleName
+		};
+		
+		style.fontFamily = 'Roboto';
+		style.fontSize = 20;
+		
+		style.colourPrimary = Subtitler.Styles.Colour.rgb( 254, 254, 254 );
+		style.colourSecondary = Subtitler.Styles.Colour.rgb( 255, 0, 0 );
+		style.colourOutline = Subtitler.Styles.Colour.rgba( 0, 0, 0, 0.8 );
+		style.colourShadow = Subtitler.Styles.Colour.hex('#000000');
+		
+		style.marginLeft = 10;
+		style.marginRight = 10;
+		style.marginVertical = 30;
+		
+		style.bold = false;
+		style.italic = false;
+		style.underline = false;
+		
+		style.alignment = Subtitler.Styles.Alignments.BOTTOM;
+		
+		style.borderStyle = Subtitler.Styles.BorderType.RECTANGLE;
+		style.outlineWidth = 3;
+		style.shadowOffset = 0;
+		
+		style.rotation = 0;
+		style.spacing = 0;
+		style.scaleX = 100;
+		style.scaleY = 100;
+		
+		style.encoding = Subtitler.Styles.Encodings.DEFAULT;
+		
+		if(pen) {
+			
+			if(pen.hasOwnProperty('b')) {
+				style.bold = (pen.b == '1');
+			}
+			if(pen.hasOwnProperty('i')) {
+				style.italic = (pen.i == '1');
+			}
+			if(pen.hasOwnProperty('u')) {
+				style.underline = (pen.u == '1');
+			}
+			
+			var colour = null;
+			if(pen.hasOwnProperty('fc')) {
+				colour = Subtitler.Styles.Colour.hex(pen.fc);
+			}
+			if(colour == null) {
+				colour = Subtitler.Styles.Colour.hex('#FEFEFE');
+			}
+			var opacity = null;
+			if(pen.hasOwnProperty('fo')) {
+				opacity = (pen.fo * 1) / 255;
+			}
+			if(opacity == null || isNaN(opacity)) {
+				opacity = 1;
+			}
+			colour.a = opacity;
+			style.colourPrimary = colour;
+			
+			
+			// TODO - bc, bo
+			// TODO - ec, et
+			
+			if(pen.hasOwnProperty('fs')) {
+				style.fontFamily = {
+					'0': 'Roboto',
+					'1': 'Courier New',
+					'2': 'Times New Roman',
+					'3': 'Lucida Console',
+					'4': 'Roboto',
+					'5': 'Comic Sans MS',
+					'6': 'Monotype Corsiva',
+					'7': 'Arial',
+				}[pen.fs] || 'Roboto';
+			}
+			
+			if(pen.hasOwnProperty('sz')) {
+				var sz = 20 * ((pen.sz - 100) / 4);
+				if(!isNaN(sz)) {
+					if(sz < 16) {
+						sz = 16;
+					}
+					style.fontSize = sz;
+				}
+			}
+			
+			// TODO - rb
+			// TODO - of
+			// TODO - te
+			// TODO - hg
+		}
+		
+		if(positioning) {
+			
+			if(positioning.ap == '0'
+					&& (positioning.ah * 1) <= 10
+					&& (positioning.av * 1) <= 10) {
+				style.alignment = Subtitler.Styles.Alignments.TOP_LEFT;
+			}
+			else if(positioning.ap == '1'
+					&& (positioning.ah * 1) >= 45 && (positioning.ah * 1) <= 55
+					&& (positioning.av * 1) <= 10) {
+				style.alignment = Subtitler.Styles.Alignments.TOP;
+			}
+			else if(positioning.ap == '2'
+					&& (positioning.ah * 1) >= 90
+					&& (positioning.av * 1) <= 10) {
+				style.alignment = Subtitler.Styles.Alignments.TOP_RIGHT;
+			}
+			else if(positioning.ap == '3'
+					&& (positioning.ah * 1) <= 10
+					&& (positioning.av * 1) >= 45 && (positioning.av * 1) <= 55) {
+				style.alignment = Subtitler.Styles.Alignments.LEFT;
+			}
+			else if(positioning.ap == '4'
+					&& (positioning.ah * 1) >= 45 && (positioning.ah * 1) <= 55
+					&& (positioning.av * 1) >= 45 && (positioning.av * 1) <= 55) {
+				style.alignment = Subtitler.Styles.Alignments.CENTER;
+			}
+			else if(positioning.ap == '5'
+					&& (positioning.ah * 1) >= 90
+					&& (positioning.av * 1) >= 45 && (positioning.av * 1) <= 55) {
+				style.alignment = Subtitler.Styles.Alignments.RIGHT;
+			}
+			else if(positioning.ap == '6'
+					&& (positioning.ah * 1) <= 10
+					&& (positioning.av * 1) >= 90) {
+				style.alignment = Subtitler.Styles.Alignments.BOTTOM_LEFT;
+			}
+			else if(positioning.ap == '7'
+					&& (positioning.ah * 1) >= 45 && (positioning.ah * 1) <= 55
+					&& (positioning.av * 1) >= 90) {
+				style.alignment = Subtitler.Styles.Alignments.BOTTOM;
+			}
+			else if(positioning.ap == '8'
+					&& (positioning.ah * 1) >= 90
+					&& (positioning.av * 1) >= 90) {
+				style.alignment = Subtitler.Styles.Alignments.BOTTOM_RIGHT;
+			}
+		}
+		
+		styles[styleName] = style;
+		
+		return style;
+	}
+	
+	var valid_p_attributes = [ 't', 'd', 'ws', 'wp', 'p' ];
+	
+	var line_objects = [ ];
+	var p_array = xmlDoc.querySelectorAll('timedtext body p');
+	for(var p=0; p<p_array.length; p++) {
+		var p_element = p_array[p];
+		var line_object = { };
+		var attributeNames = p_element.getAttributeNames();
+		for(var a=0; a<attributeNames.length; a++) {
+			if(valid_p_attributes.indexOf(attributeNames[a]) == -1) {
+				// TODO - log error
+				continue;
+			}
+			line_object[attributeNames[a]] = p_element.getAttribute(attributeNames[a]);
+		}
+		line_object.__element = p_element;
+		line_objects[line_objects.length] = line_object;
+	}
+
+	var lines = [ ];
+	for(var n=0; n<line_objects.length; n++) {
+		var line_object = line_objects[n];
+		
+		var start = line_object.t / 1000;
+		var duration = line_object.d / 1000;
+		var end = ((line_object.t * 1) + (line_object.d * 1)) / 1000;
+		
+		var line_pen = line_object.p || null;
+		var line_alignment = line_object.ws || null;
+		var line_positioning = line_object.wp || null;
+		
+		var style = getOrCreateStyle(line_pen, line_alignment, line_positioning);
+		
+		var text = '';
+		
+		if(line_object.__element && line_object.__element.childNodes) {
+			for(var i=0; i<line_object.__element.childNodes.length; i++) {
+				var node = line_object.__element.childNodes[i];
+				if(node instanceof Element) {
+					var block_pen = line_pen;
+					if(node.tagName && node.tagName == 's') {
+						if(node.getAttribute('p')) {
+							block_pen = node.getAttribute('p');
+						}
+					}
+					if(block_pen != line_pen) {
+						if((node.textContent || '').replace(/\u200B/g, '').replace(/\n/g, '\\N')) {
+							var block_style = getOrCreateStyle(block_pen, line_alignment, line_positioning);
+							text += '{\\r' + block_style.name + '}';
+							text += (node.textContent || '').replace(/\u200B/g, '').replace(/\n/g, '\\N');
+							text += '{\\r}'
+						}
+					}
+				}
+				if(node instanceof Text) {
+					text += (node.textContent || '').replace(/\u200B/g, '').replace(/\n/g, '\\N');
+				}
+			}
+		}
+		//text = p_array[n].textContent;
+		
+		lines.push({
+			start: start,
+			end: end,
+			style: style.name,
+			text_src: text
+		});
+	}
+	
+	var style_array = [ ];
+	for(var s in styles) {
+		if(styles.hasOwnProperty(s)) {
+			style_array.push(styles[s]);
+		}
+	}
+	
+	var subtitles = {
+		lines: lines,
+		styles: style_array,
+		info: { }
+	};
+	
+	return subtitles;
 }

@@ -328,7 +328,7 @@ Subtitler.Video.__loadDummyVideo = function( width, height, colour, checkerboard
 	}
 	
 	Subtitler.Video.hasRealVideo = false;
-	setVideoDimensions( Subtitler.Garbage.dummyVideo.width, Subtitler.Garbage.dummyVideo.height );
+	Subtitler.Video.setVideoNaturalDimensions( Subtitler.Garbage.dummyVideo.width, Subtitler.Garbage.dummyVideo.height );
 	Subtitler.Video.seeking = false;
 	Subtitler.Video.isPlaying = false;
 	Subtitler.Video.time = 0;
@@ -1033,6 +1033,12 @@ Subtitler.Formatting.prettify = function( text ) {
 				outputText += '<span class="highlight-command">' + text.substring(1) + '</span>';
 				continue;
 			}
+			else if(text.startsWith('\\r')) {
+				outputText += '<span class="highlight-syntax">\\</span>';
+				outputText += '<span class="highlight-command">r</span>';
+				outputText += '<span class="highlight-param">' + text.substring(2) + '</span>';
+				continue;
+			}
 			else if(text.startsWith('\\fn')) {
 				outputText += '<span class="highlight-syntax">\\</span>';
 				outputText += '<span class="highlight-command">fn</span>';
@@ -1554,8 +1560,8 @@ Subtitler.Lines.__updateLineNumbers = function( ) {
 
 Subtitler.Lines.__checkIfActorPresent = function( ) {
 	var actorPresent = false;
-	for(var n=0; n<Subtitler.Lines.length; n++) {
-		if(Subtitler.Lines[n].actor) {
+	for(var n=0; n<Subtitler.Lines.list.length; n++) {
+		if(Subtitler.Lines.list[n].actor) {
 			actorPresent = true;
 			break;
 		}
@@ -1911,15 +1917,842 @@ Subtitler.Lines.__computeAlternateTextForms = function( line ) {
 						.replace(/ /g, '&nbsp;')
 						.replace(/\\N/g, Subtitler.Formatting.newlineCharacterReplacement)
 						.replace(/\{[^}]*\}/g, Subtitler.Formatting.specialCharacterReplacement);
-	// TODO - line.text_html
+	line.text_rich = Subtitler.Lines.__computeRichTextForm(line);
 	line.text_html = line.text_plain
 						.replace(/&/g, '&amp;')
 						.replace(/</g, '&lt;')
 						.replace(/>/g, '&gt;');
 }
 
+Subtitler.Lines.__computeRichTextForm = function( line ) {
+	
+	var RichTextType = {
+		TEXT: 0,
+		HARD_SPACE: 1,
+		SOFT_LINE_BREAK: 2,
+		HARD_LINE_BREAK: 3
+	};
+	
+	var HARD_SPACE_CHARACTER = '\00A0';
+	var SOFT_LINE_BREAK_CHARACTER = '\200B';
+	var HARD_LINE_BREAK_CHARACTER = '\r\n';
+	
+	var richtext = [ ];
+	
+	/*
+		text: '',
+		style: {
+			
+		}
+	*/
+	
+	var initialStyle = Subtitler.Styles.map[line.style] || Subtitler.Styles.DefaultStyle;
+		
+	var commands = {
+		'b': {
+			name: 'b',
+			multiArg: false,
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(args[0] == 0 || args[0] == 1) {
+					currentStyle.bold = !!args[0];
+					currentStyle.fontWeight = !!args[0] ? 'bold' : 'normal';
+				}
+				else if(args[0] <= 400) {
+					currentStyle.bold = false;
+					currentStyle.fontWeight = args[0];
+				}
+				else if(args[0] > 400) {
+					currentStyle.bold = true;
+					currentStyle.fontWeight = args[0];
+				}
+			}
+		},
+		'i': {
+			name: 'i',
+			argTypes: ['bool-int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.italic = !!args[0];
+			}
+		},
+		'u': {
+			name: 'u',
+			argTypes: ['bool-int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.underline = !!args[0];
+			}
+		},
+		's': {
+			name: 's',
+			argTypes: ['bool-int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.strikeout = !!args[0];
+			}
+		},
+		'bord': {
+			name: 'bord',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.outlineWidth = args[0];
+				currentStyle.outlineWidthX = args[0];
+				currentStyle.outlineWidthY = args[0];
+			}
+		},
+		'xbord': {
+			name: 'xbord',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.outlineWidthX = args[0];
+				if(currentStyle.outlineWidthX == currentStyle.outlineWidthY) {
+					currentStyle.outlineWidth = args[0];
+				}
+			}
+		},
+		'ybord': {
+			name: 'ybord',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.outlineWidthY = args[0];
+				if(currentStyle.outlineWidthX == currentStyle.outlineWidthY) {
+					currentStyle.outlineWidth = args[0];
+				}
+			}
+		},
+		'shad': {
+			name: 'shad',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.shadowOffset = args[0];
+				currentStyle.shadowOffsetX = args[0];
+				currentStyle.shadowOffsetY = args[0];
+			}
+		},
+		'xshad': {
+			name: 'xshad',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.shadowOffsetX = args[0];
+				if(currentStyle.shadowOffsetX == currentStyle.shadowOffsetY) {
+					currentStyle.shadowOffset = args[0];
+				}
+			}
+		},
+		'yshad': {
+			name: 'yshad',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.shadowOffsetY = args[0];
+				if(currentStyle.shadowOffsetX == currentStyle.shadowOffsetY) {
+					currentStyle.shadowOffset = args[0];
+				}
+			}
+		},
+		'be': {
+			name: 'be',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.blurStrength = args[0];
+				currentStyle.blurType = 'discrete';
+			}
+		},
+		'blur': {
+			name: 'blur',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.blurStrength = args[0];
+				currentStyle.blurType = 'guassian';
+			}
+		},
+		'fn': {
+			name: 'fn',
+			argTypes: ['string'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.fontFamily = args[0];
+			}
+		},
+		'fs': {
+			name: 'fs',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.fontSize = args[0];
+			}
+		},
+		'fscx': {
+			name: 'fscx',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.scaleX = args[0];
+			}
+		},
+		'fscy': {
+			name: 'fscy',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.scaleY = args[0];
+			}
+		},
+		'fsp': {
+			name: 'fsp',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.spacing = args[0];
+			}
+		},
+		'frx': {
+			name: 'frx',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.rotationX = args[0];
+			}
+		},
+		'fry': {
+			name: 'fry',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.rotationY = args[0];
+			}
+		},
+		'frz': {
+			name: 'frz',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.rotationZ = args[0];
+				currentStyle.rotation = args[0];
+			}
+		},
+		'fr': {
+			name: 'fr',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.rotationZ = args[0];
+				currentStyle.rotation = args[0];
+			}
+		},
+		'fax': {
+			name: 'fax',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.shearX = args[0];
+			}
+		},
+		'fay': {
+			name: 'fax',
+			argTypes: ['float'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.shearY = args[0];
+			}
+		},
+		'fe': {
+			name: 'fe',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.encoding = args[0];
+			}
+		},
+		'c': {
+			name: 'c',
+			argTypes: ['colour'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourPrimary.r = args[0].r;
+				currentStyle.colourPrimary.g = args[0].g;
+				currentStyle.colourPrimary.b = args[0].b;
+			}
+		},
+		'1c': {
+			name: '1c',
+			argTypes: ['colour'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourPrimary.r = args[0].r;
+				currentStyle.colourPrimary.g = args[0].g;
+				currentStyle.colourPrimary.b = args[0].b;
+			}
+		},
+		'2c': {
+			name: '2c',
+			argTypes: ['colour'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourSecondary.r = args[0].r;
+				currentStyle.colourSecondary.g = args[0].g;
+				currentStyle.colourSecondary.b = args[0].b;
+			}
+		},
+		'3c': {
+			name: '3c',
+			argTypes: ['colour'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourOutline.r = args[0].r;
+				currentStyle.colourOutline.g = args[0].g;
+				currentStyle.colourOutline.b = args[0].b;
+			}
+		},
+		'4c': {
+			name: '4c',
+			argTypes: ['colour'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourShadow.r = args[0].r;
+				currentStyle.colourShadow.g = args[0].g;
+				currentStyle.colourShadow.b = args[0].b;
+			}
+		},
+		'alpha': {
+			name: 'alpha',
+			argTypes: ['hex'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourPrimary.alpha = args[0];
+				currentStyle.colourSecondary.alpha = args[0];
+				currentStyle.colourOutline.alpha = args[0];
+				currentStyle.colourShadow.alpha = args[0];
+			}
+		},
+		'1a': {
+			name: '1a',
+			argTypes: ['hex'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourPrimary.alpha = args[0];
+			}
+		},
+		'2a': {
+			name: '2a',
+			argTypes: ['hex'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourSecondary.alpha = args[0];
+			}
+		},
+		'3a': {
+			name: '3a',
+			argTypes: ['hex'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourOutline.alpha = args[0];
+			}
+		},
+		'4a': {
+			name: '4a',
+			argTypes: ['hex'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.colourShadow.alpha = args[0];
+			}
+		},
+		'an': {
+			name: 'an',
+			multiArg: false,
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.alignment = args[0];
+			}
+		},
+		'a': {
+			name: 'a',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(args[0] >= 1 || args[0] <=3) {
+					currentStyle.alignment = args[0];
+				}
+				else if(args[0] >= 5 || args[0] <=6) {
+					currentStyle.alignment = args[0] + 2;
+				}
+				else if(args[0] >= 8 || args[0] <=11) {
+					currentStyle.alignment = args[0] - 5;
+				}
+			}
+		},
+		// k
+		// K
+		// Kf
+		// ko
+		'q': {
+			name: 'q',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(args[0] >=0 && args[0] <= 3) {
+					currentStyle.wrapStyle = args[0];
+				}
+			}
+		},
+		'r': {
+			name: 'r',
+			argTypes: [[], ['string']],
+			effect: function(args, currentStyle, lineProperties) {
+				var style = args[0] ? (Subtitler.Styles.map[args[0]] || initialStyle) : initialStyle;
+				for(var prop in currentStyle) {
+					if(currentStyle.hasOwnProperty(prop)) {
+						delete currentStyle[prop];
+					}
+				}
+				for(var prop in style) {
+					if(style.hasOwnProperty(prop)) {
+						if(initialStyle[prop] instanceof Subtitler.Styles.Colour) {
+							currentStyle[prop] = initialStyle[prop].copy();
+						}
+						else {
+							currentStyle[prop] = initialStyle[prop];
+						}
+					}
+				}
+			}
+		},
+		'pos': {
+			name: 'pos',
+			argTypes: ['int', 'int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.motion || lineProperties.position) {
+					return;
+				}
+				lineProperties.position = { 'x': args[0], 'y': args[1] };
+			}
+		},
+		'move': {
+			name: 'move',
+			multiArg: false,
+			argTypes: [
+				['int', 'int', 'int', 'int'],
+				['int', 'int', 'int', 'int', 'int', 'int', 'int']
+			],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.motion || lineProperties.position) {
+					return;
+				}
+				lineProperties.position = {
+					'x': args[0],
+					'y': args[1]
+				}
+				var startTime = line.start;
+				if(args[5] != undefined) {
+					startTime = line.start + (args[5] / 1000);
+				}
+				var endTime = line.end;
+				if(args[6] != undefined) {
+					endTime = line.start + (args[6] / 1000);
+				}
+				lineProperties.motion = {
+					'startX': args[0],
+					'startY': args[1],
+					'startTime': startTime,
+					'endX': args[2],
+					'endY': args[3],
+					'endTime': endTime
+				};
+			}
+		},
+		'org': {
+			name: 'org',
+			multiArg: false,
+			argTypes: ['int', 'int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.rotationOrigin) {
+					return;
+				}
+				lineProperties.rotationOrigin = { 'x': args[0], 'y': args[1] }
+			}
+		},
+		'fad': {
+			name: 'fad',
+			multiArg: false,
+			argTypes: ['int', 'int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.fade) {
+					return;
+				}
+				lineProperties.fade = {
+					'initialOpacity': 0,
+					'fadeInStart': line.start,
+					'fadeInEnd': line.start + (args[0] / 1000),
+					'intermediateOpacity': 1,
+					'fadeOutStart': line.end - (args[1] / 1000),
+					'fadeOutEnd': line.end,
+					'finalOpacity': 0
+				}
+			}
+		},
+		'fade': {
+			name: 'fade',
+			argTypes: ['int', 'int', 'int', 'int', 'int', 'int', 'int'],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.fade) {
+					return;
+				}
+				lineProperties.fade = {
+					'initialOpacity': 255 - args[0],
+					'fadeInStart': line.start + (args[3] / 1000),
+					'fadeInEnd': line.start + (args[4] / 1000),
+					'intermediateOpacity': 255 - args[1],
+					'fadeOutStart': line.start + (args[5] / 1000),
+					'fadeOutEnd': line.start + (args[6] / 1000),
+					'finalOpacity': 255 - args[2]
+				}
+			}
+		},
+		't': {
+			name: 't',
+			argTypes: [
+				['string'],
+				['int', 'string'],
+				['int', 'int', 'string'],
+				['int', 'int', 'int', 'string']
+			],
+			effect: function(args, currentStyle, lineProperties) {
+				// TODO
+			}
+		},
+		'clip': {
+			name: 'clip',
+			argTypes: [
+				['int', 'int', 'int', 'int'],
+				['string'],
+				['float', 'string']
+			],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.clip) {
+					return;
+				}
+				// TODO
+			}
+		},
+		'iclip': {
+			name: 'iclip',
+			argTypes: [
+				['int', 'int', 'int', 'int'],
+				['string'],
+				['float', 'string']
+			],
+			effect: function(args, currentStyle, lineProperties) {
+				if(lineProperties.clip) {
+					return;
+				}
+				// TODO
+			}
+		},
+		'p': {
+			name: 'p',
+			argTypes: ['int'],
+			effect: function(args, currentStyle, lineProperties) {
+				currentStyle.isDrawing = !!args[0];
+				currentStyle.drawingScale = args[0];
+			}
+		}
+		// pbo
+	};
+	
+	var getCommand = function( commandBuffer ) {
+		
+		var invalid = false;
+		
+		var commandRegex = /^(?:([0-9a-zA-Z][a-z]*))(?:(?:([^\(\,\)]+)|(?:\(([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)(?:\)|,(?:([^\(\),]+(?:\([^\(\)]+\))*[^\),]*)+)\)))))))))))?$/;
+		var group = commandBuffer.match(commandRegex);
+		if(!group) {
+			return null;
+		}
+		
+		var commandName = group[1];
+		
+		var commandArgStrings = [ ];
+		if(group[2]) {
+			commandArgStrings.push(group[2]);
+		}
+		else if(group[3]) {
+			for(var i=0; i<10; i++) {
+				if(group[i]) {
+					commandArgStrings.push(group[i]);
+				}
+				else {
+					break;
+				}
+			}
+		}
+		
+		var command = commands[commandName];
+		
+		var commandArgTypes = null;
+		if(command && Array.isArray(command.argTypes[0])) {
+			for(var i=0; i<command.argTypes.length; i++) {
+				if(command.argTypes[i].length == commandArgStrings.length) {
+					commandArgTypes = command.argTypes[i];
+					break;
+				}
+			}
+		}
+		else {
+			commandArgTypes = command.argTypes;
+		}
+		
+		if(commandArgTypes == null) {
+			invalid = true;
+		}
+		else if(commandArgTypes.length != commandArgStrings.length) {
+			commandArgTypes = null;
+			invalid = true;
+		}
+		
+		var commandArgs = null;
+		if(commandArgTypes != null && commandArgStrings != null) {
+			commandArgs = [ ];
+			for(var i=0; i<commandArgStrings.length; i++) {
+				var type = commandArgTypes[i];
+				var stringValue = commandArgStrings[i];
+				var value;
+				if(type == 'string') {
+					value = stringValue;
+				}
+				else if(type == 'bool-int') {
+					if(stringValue == '1') {
+						value = true;
+					}
+					else if(stringValue == '0') {
+						value = false;
+					}
+					else {
+						invalid = true;
+						break;
+					}
+				}
+				else if(type == 'int') {
+					if(/[0-9]+/.test(stringValue)) {
+						value = stringValue * 1;
+					}
+					else {
+						invalid = true;
+						break;
+					}
+				}
+				else if(type == 'float') {
+					if(/[0-9]+(?:\.[0-9]+)/.test(stringValue)) {
+						value = stringValue * 1;
+					}
+					else {
+						invalid = true;
+						break;
+					}
+				}
+				else if(type == 'colour') {
+					value = Subtitler.Styles.Colour.aegisubBGR(stringValue);
+					if(value == null) {
+						invalid = true;
+						break;
+					}
+				}
+				else if(type == 'hex') {
+					var hexString = stringValue.match(/^&H([0-9A-Fa-f]+)&/);
+					if(hexString) {
+						value = Number.parseInt('100', hexString[1]);
+					}
+					else {
+						invalid = true;
+					}
+				}
+				else {
+					// TODO
+				}
+				
+				commandArgs.push(value);
+			}
+		}
+		
+		return invalid ? null : {
+			command: command,
+			args: commandArgs
+		};
+	}
+	
+	var currentStyle = { };
+	for(var prop in initialStyle) {
+		if(initialStyle.hasOwnProperty(prop)) {
+			if(initialStyle[prop] instanceof Subtitler.Styles.Colour) {
+				currentStyle[prop] = initialStyle[prop].copy();
+			}
+			else {
+				currentStyle[prop] = initialStyle[prop];
+			}
+		}
+	}
+	
+	var buffer = '';
+	
+	var inBlock = false;
+	var escaped = false;
+	brackets = 0;
+	
+	var lineProperties = { };
+	
+	var lineParts = [ ];
+	
+	for(var c=0; c<line.text_src.length; c++) {
+		var character = line.text_src[c];
+		
+		if(!inBlock && character == '{') {
+			inBlock = true;
+			if(escaped) {
+				buffer += '\\';
+			}
+			escaped = false;
+			if(buffer) {
+				var currentPart = { };
+				currentPart.text = buffer;
+				currentPart.style = currentStyle;
+				currentPart.type = RichTextType.TEXT;
+				lineParts.push(currentPart);
+				
+				var previousStyle = currentStyle;
+				currentStyle = { };
+				for(var prop in initialStyle) {
+					if(initialStyle.hasOwnProperty(prop)) {
+						if(initialStyle[prop] instanceof Subtitler.Styles.Colour) {
+							currentStyle[prop] = initialStyle[prop].copy();
+						}
+						else {
+							currentStyle[prop] = initialStyle[prop];
+						}
+					}
+				}
+				buffer = '';
+			}
+			continue;
+		}
+		else if(!inBlock && character == '\\' && !escaped) {
+			escaped = true;
+			continue;
+		}
+		else if(!inBlock && escaped && (character == 'h' || character == 'n' || character == 'N')) {
+			escaped = false;
+			
+			if(buffer) {
+				var currentPart = { };
+				currentPart.text = buffer;
+				currentPart.style = currentStyle;
+				currentPart.type = RichTextType.TEXT;
+				lineParts.push(currentPart);
+				
+				var previousStyle = currentStyle;
+				currentStyle = { };
+				for(var prop in initialStyle) {
+					if(initialStyle.hasOwnProperty(prop)) {
+						if(initialStyle[prop] instanceof Subtitler.Styles.Colour) {
+							currentStyle[prop] = initialStyle[prop].copy();
+						}
+						else {
+							currentStyle[prop] = initialStyle[prop];
+						}
+					}
+				}
+				buffer = '';
+			}
+			
+			var specialCharacterText = {
+				'h': HARD_SPACE_CHARACTER,
+				'n': SOFT_LINE_BREAK_CHARACTER,
+				'N': HARD_LINE_BREAK_CHARACTER
+			}[character];
+			
+			var partType = {
+				'h': RichTextType.HARD_SPACE,
+				'n': RichTextType.SOFT_LINE_BREAK,
+				'N': RichTextType.HARD_LINE_BREAK
+			}[character];
+
+			
+			var currentPart = { };
+			currentPart.text = specialCharacterText;
+			currentPart.style = currentStyle;
+			currentPart.type = partType;
+			lineParts.push(currentPart);
+			
+			var previousStyle = currentStyle;
+			currentStyle = { };
+			for(var prop in initialStyle) {
+				if(initialStyle.hasOwnProperty(prop)) {
+					if(initialStyle[prop] instanceof Subtitler.Styles.Colour) {
+						currentStyle[prop] = initialStyle[prop].copy();
+					}
+					else {
+						currentStyle[prop] = initialStyle[prop];
+					}
+				}
+			}
+			
+			continue;
+		}
+		else if(!inBlock && escaped) {
+			buffer += '\\';
+		}
+		
+		if(!inBlock) {
+			buffer += character;
+			continue;
+		}
+		
+		var command = null;
+		var commandArgs = [ ];
+		
+		// at this point, it must be in a block
+		
+		if(!escaped && character == '\\') {
+			escaped = true;
+			continue;
+		}
+		
+		if(character == '(') {
+			brackets += 1;
+		}
+		if(character == ')') {
+			brackets -= 1;
+		}
+		
+		if((character == '\\' && brackets == 0)
+			|| character == '}') {
+				
+			if(buffer == '') {
+				continue;
+			}
+			
+			inBlock = (character != '}');
+			escaped = (character == '\\');
+			
+			var commandAndArgs = getCommand(buffer);
+			buffer = '';
+			if(commandAndArgs == null) {
+				continue;
+			}
+			command = commandAndArgs.command;
+			commandArgs = commandAndArgs.args;
+		}
+		else if(escaped) {
+			buffer += character;
+		}
+		
+		if(command != null) {
+			command.effect(commandArgs, currentStyle, lineProperties);
+			continue;
+		}
+	}
+	
+	if(!inBlock && escaped) {
+		buffer += '\\';
+	}
+	if(buffer) {
+		var currentPart = { };
+		currentPart.text = buffer;
+		currentPart.style = currentStyle;
+		currentPart.type = RichTextType.TEXT;
+		lineParts.push(currentPart);
+		
+		var previousStyle = currentStyle;
+		currentStyle = { };
+		for(var prop in initialStyle) {
+			if(initialStyle.hasOwnProperty(prop)) {
+				if(initialStyle[prop] instanceof Subtitler.Styles.Colour) {
+					currentStyle[prop] = initialStyle[prop].copy();
+				}
+				else {
+					currentStyle[prop] = initialStyle[prop];
+				}
+			}
+		}
+		buffer = '';
+	}
+	
+	return lineParts;
+}
+
 Subtitler.Lines.__computeCPS = function( line ) {
-	var visibleCharacters = line.text_plain.replace(/[\r\n\t "',.]+/g, '');
+	var visibleCharacters = line.text_plain.replace(/[\r\n\t "',.\-\?!¡¿]+/g, '');
 	var visibleCharactersCount = visibleCharacters.length;
 	var cps = line.duration < 0.1 ? NaN : (visibleCharacters.length/line.duration);
 	line.cps = isNaN(cps) ? NaN : (visibleCharactersCount == 0 ? 0 : Math.max(1, cps | 0));

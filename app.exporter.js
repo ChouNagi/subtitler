@@ -50,6 +50,16 @@ Subtitler.Exporter.__setFileExtension = function( filename, extension ) {
 }
 
 Subtitler.Exporter.__saveToFile = function( filename, mimetype, filecontents ) {
+	
+	if(!mimetype.startsWith('video/')
+			&& !mimetype.startsWith('image/')
+			&& !mimetype.startsWith('audio/')) {
+				
+		if(mimetype.indexOf(';') == -1) {
+			mimetype = mimetype + ';charset=UTF-8';
+		}
+	}
+	
 	var blob = new Blob([filecontents], { type: mimetype });
 	var fileUrl = URL.createObjectURL(blob);
 	var downloadLink = document.createElement('A');
@@ -160,10 +170,10 @@ Subtitler.Exporter.__convertToASS = function( ) {
 			+ style.name + ','
 			+ style.fontFamily + ','
 			+ style.fontSize + ','
-			+ style.colourPrimary.toAegisubBGRA() + ','
-			+ style.colourSecondary.toAegisubBGRA() + ','
-			+ style.colourOutline.toAegisubBGRA() + ','
-			+ style.colourShadow.toAegisubBGRA() + ','
+			+ style.colourPrimary.toAegisubABGR() + ','
+			+ style.colourSecondary.toAegisubABGR() + ','
+			+ style.colourOutline.toAegisubABGR() + ','
+			+ style.colourShadow.toAegisubABGR() + ','
 			+ (style.bold ? '1' : '0') + ','
 			+ (style.italic ? '1' : '0') + ','
 			+ (style.underline ? '1' : '0') + ','
@@ -380,8 +390,20 @@ Subtitler.Exporter.__convertToYTT = function( ) {
 	};
 	
 	var defaultFontSize = 20;
+	
+	function getEffectiveFontSize( fontSize ) {
+		if(fontSize == defaultFontSize) {
+			return 100;
+		}
+		var percentageOfDefaultSize = (fontSize / defaultFontSize);
+		var clampedPercentage = Math.max(0.75, percentageOfDefaultSize);
+		var yttScaledValue = (clampedPercentage*4) - 300;
+		
+		return yttScaledValue;
+	}
+	
 	// fz - font size (relative to Default size)
-	// 50 = 75%
+	// 0 = 75%
 	// 100 = 100% Default size
 	// 200 = 125%
 	// 300 = 150%
