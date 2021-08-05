@@ -1,0 +1,110 @@
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+
+html,
+body {
+	margin: 0;
+	background-color: #f4f4f4;
+	font-family: Arial, 'sans-serif';
+}
+
+.page-wrapper {
+	max-width: 900px;
+	margin: 0px auto;
+}
+@media screen and (max-width: 940px) {
+	.page-wrapper {
+		margin: 0px 20px;
+	}
+}
+
+.patch-notes article {
+	background-color: #ffffff;
+	border: 1px solid #cccccc;
+	padding: 20px;
+}
+.patch-notes article:not(:last-child) {
+	margin-bottom: 20px;
+}
+.patch-notes article .version {
+	display: inline-block;
+	font-weight: bold;
+	margin-right: 15px;
+}
+
+.patch-notes article ul {
+	padding-top: 5px;
+	padding-left: 15px;
+	margin: 0;
+}
+.patch-notes article ul li {
+	padding: 5px 5px 5px 5px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-items: center;
+}
+
+.chrome-icon {
+	background-image: url("./chrome.svg");
+	background-repeat: no-repeat;
+	width: 16px;
+	height: 16px;
+	display: inline-block;
+	position: relative;
+	margin-right: 4px;
+	margin-left: 4px;
+}
+
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+<h1><a href="https://subtitler-webapp.web.app">Subtitler WebApp</a> - Patch Notes</h1>
+
+<div class="patch-notes">
+
+	<article>
+		<heading>
+			<div class="version">0.3</div>
+			<time datetime="2021-06-13T22:50:00Z">2021-06-13 22:50 (UTC)</time>
+		</heading>
+		<div class="article-content">
+			<ul>
+				<li>BugFix: Unable to insert new lines via right click menu</li>
+			</ul>
+		</div>
+	</article>
+
+	<article>
+		<heading>
+			<div class="version">0.2</div>
+			<time datetime="2021-06-13T15:30:00Z">2021-06-13 15:30 (UTC)</time>
+		</heading>
+		<div class="article-content">
+			<ul>
+				<li>BugFix: Video resize dropdown doesn't work if resulting video width of the scaled video would exceed 640px</li>
+				<li>BugFix: Portrait Videos broke everything</li>
+				<li>BugFix: <span class="chrome-icon"></span> Changing audio breaks the spectrogram</li>
+			</ul>
+		</div>
+	</article>
+
+	<article>
+		<heading>
+			<div class="version">0.1</div>
+			<time datetime="2021-06-12T07:42:00Z">2021-06-12 07:42 (UTC)</time>
+		</heading>
+		<div class="article-content">
+			<ul>
+				<li>Initial Release</li>
+			</ul>
+		</div>
+	</article>
+</div>
+
+</div>
+</html>
