@@ -100,9 +100,9 @@ Subtitler.Translations['en'] = {
 	lineContextMenuDeleteLine: 'Delete Line',
 	
 	aboutPopupTitle: 'About',
-	aboutPopupMessage: 'Despite the similarities in appearance and function, this webapp is not affiliated with Aegisub, nor does it share any code with Aegisub. (In retrospect if it did, I\'d have saved several days on the spectrogram). Even ignoring the multiple bugs and unfinished state of the webapp, for most purposes the finished webapp will be objectively inferior to Aegisub due to the limitations of html+javascript. If you have the opportunity, I\'d highly recommend installing Aegisub and using that instead.\n\nThis webapp is open source, and the source code will be hosted on github at some point in the future (once I\'ve cleaned it up so it\'s no longer a complete embarassment). For now you can view the source by opening the dev tools in your browser - it\'s just a static webapp. I apologise for the state of the code in advance. License will be MIT, or whatever Aegisub uses if just mimicing the layout and function is is enough to fall under the license\'s terms.',
+	aboutPopupMessage: 'Despite the similarities in appearance and function, this webapp is not affiliated with Aegisub, nor does it share any code with Aegisub. (In retrospect if it did, I\'d have saved several days on the spectrogram and it\'d work a lot better). Even ignoring the multiple bugs and unfinished state of the webapp, for most purposes the finished webapp will be objectively inferior to Aegisub due to the limitations of html+javascript. If you have the opportunity, I\'d highly recommend installing Aegisub and using that instead.\n\nThis webapp is open source, and the source code is hosted on github if for some reason you want to help, make your own copy, or question my sanity.',
 	aboutPopupButtonAegisub: 'Aegisub',
-	aboutPopupButtonSrc: 'Source Code',
+	aboutPopupButtonSrc: 'Source',
 	aboutPopupButtonClose: 'Close',
 	
 	fatalImportErrorPopupTitle: 'Error',

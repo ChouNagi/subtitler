@@ -3336,6 +3336,12 @@ document.querySelector('.webapp-menu-about').addEventListener('click', function(
 				}
 			},
 			{
+				label: Subtitler.Translations.get('aboutPopupButtonSrc'),
+				callback: function() {
+					window.open('https://github.com/ChouNagi/subtitler', '_blank');
+				}
+			},
+			{
 				label: Subtitler.Translations.get('aboutPopupButtonClose')
 			}
 		]
