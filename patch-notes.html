@@ -10,6 +10,10 @@ body {
 	font-family: Arial, 'sans-serif';
 }
 
+body {
+	margin-bottom: 20px;
+}
+
 .page-wrapper {
 	max-width: 900px;
 	margin: 0px auto;
@@ -67,6 +71,19 @@ body {
 
 <div class="patch-notes">
 
+	<article>
+		<heading>
+			<div class="version">0.5</div>
+			<time datetime="2021-08-29T15:30:00Z">2021-08-29 15:30 (UTC)</time>
+		</heading>
+		<div class="article-content">
+			<ul>
+				<li>BugFix: Excessively long error messages do not scroll correctly.</li>
+				<li>Feature: SRT and SBV parsing is now more lenient (handles form feeds and stray line numbers)</li>
+			</ul>
+		</div>
+	</article>
+	
 	<article>
 		<heading>
 			<div class="version">0.4</div>

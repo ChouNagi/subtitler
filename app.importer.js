@@ -848,19 +848,32 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 			ExpectInfoOrCloseInfo: 1,
 			ExpectSubtitle: 2,
 			ExpectStyling: 3,
-			ExpectStartEndTimes: 4,
-			ExpectTextOrEmptyLine: 5
+			ExpectStartEndTimesOrUnnecessaryLineNumber: 4,
+			ExpectStartEndTimes: 5,
+			ExpectTextOrEmptyLine: 6
 		};
 		
-		var filelines = filecontents.split(/(?:\r\n|\n|\r)/);
-			
 		var lineStart = null;
 		var lineEnd = null;
 		var lineText = null;
 		var lineErrors = [ ];
 		
+		var unicodeFormFeedCharacterRegex = new RegExp('\u000C', 'g');
+		
+		if(filecontents.indexOf('\u000C') != -1) {
+			parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+			parsedSubtitles.errors.push('File contains form feed characters, resolved by treating as newlines. Note, this may cause line numbers in further error messages to be inaccurate');
+			if(strict) {
+				throw new ParseException(n+1, parsedSubtitles.errors[0]);
+			}
+			filecontents = filecontents.replace(unicodeFormFeedCharacterRegex, '\n');
+		}
+		
+		var filelines = filecontents.split(/(?:\r\n|\n|\r)/);
+		
 		var lineStartEndTimesRegexStrict = /^(?:([0-9][0-9]?):)?([0-9][0-9]):([0-9][0-9])\.([0-9][0-9][0-9]),([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])\.([0-9][0-9][0-9])$/;
 		var lineStartEndTimesRegexLoose = /^(?:([0-9][0-9]?):)?([0-9][0-9]?):([0-9][0-9]?)(?:(?:,|\.|:)([0-9][0-9]?[0-9]?))? ?(?:--?-?>?|,) ?(?:([0-9][0-9]?):)?0?0?([0-9][0-9]):([0-9][0-9])(?:(?:,|\.|:)([0-9][0-9]?[0-9]?))?$/;
+		var lineStartEndTimesRegexLooseWithPrecedingLineNumber = /^[0-9]+\s+(?:([0-9][0-9]?):)?([0-9][0-9]?):([0-9][0-9]?)(?:(?:,|\.|:)([0-9][0-9]?[0-9]?))? ?(?:--?-?>?|,) ?(?:([0-9][0-9]?):)?0?0?([0-9][0-9]):([0-9][0-9])(?:(?:,|\.|:)([0-9][0-9]?[0-9]?))?$/;
 		
 		var actorLineRegex = /^>> ([A-Za-z0-9][^:]*): /;
 		
@@ -878,6 +891,11 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 				}
 				if(lineStartEndTimesRegexLoose.test(fileline)) {
 					parserState = State.ExpectStartEndTimes;
+					n -= 1;
+					continue;
+				}
+				if(/^[0-9]+$/.test(fileline) || lineStartEndTimesRegexLooseWithPrecedingLineNumber.test(fileline)) {
+					parserState = State.ExpectStartEndTimesOrUnnecessaryLineNumber;
 					n -= 1;
 					continue;
 				}
@@ -931,6 +949,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 					else {
 						info.errors = info.errors || [ ];
 						info.errors.push('Line ' + (n+1) + ': ' + fileline.substring(0,6) + ' tag within [INFORMATION] section');
+						parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+						parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + fileline.substring(0,6) + ' tag within [INFORMATION] section');
 					}
 					parserState = State.ExpectStyling;
 					n -= 1;
@@ -944,6 +964,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 						else {
 							info.errors = info.errors || [ ];
 							info.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [TITLE] tag, overwriting previous value "' + info.title + '" with "' + fileline.substring(7) + '"');
+							parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+							parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [TITLE] tag, overwriting previous value "' + info.title + '" with "' + fileline.substring(7) + '"');
 						}
 					}
 					info.title = fileline.substring(7);
@@ -957,6 +979,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 						else {
 							info.errors = info.errors || [ ];
 							info.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [AUTHOR] tag, overwriting previous value "' + info.author + '" with "' + fileline.substring(8) + '"');
+							parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+							parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [AUTHOR] tag, overwriting previous value "' + info.author + '" with "' + fileline.substring(8) + '"');
 						}
 					}
 					info.author = fileline.substring(8);
@@ -969,7 +993,9 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 						}
 						else {
 							info.errors = info.errors || [ ];
-							info.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [DELAY] tag, overwriting previous value "' + info.title + '" with "' + fileline.substring(7) + '"')
+							info.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [DELAY] tag, overwriting previous value "' + info.title + '" with "' + fileline.substring(7) + '"');
+							parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+							parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Duplicate [DELAY] tag, overwriting previous value "' + info.title + '" with "' + fileline.substring(7) + '"');
 						}
 					}
 					if(/\[DELAY\][0-9]+/.test(fileline)) {
@@ -980,7 +1006,9 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 					}
 					else {
 						info.errors = info.errors || [ ];
-						info.errors.push('Line ' + (n+1) + ': ' + 'Ignored [DELAY] tag with non integer frame delay "' + fileline.substring(7) + '"')
+						info.errors.push('Line ' + (n+1) + ': ' + 'Ignored [DELAY] tag with non integer frame delay "' + fileline.substring(7) + '"');
+						parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+						parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Ignored [DELAY] tag with non integer frame delay "' + fileline.substring(7) + '"');
 					}
 					continue;
 				}
@@ -990,7 +1018,9 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 					}
 					else {
 						info.errors = info.errors || [ ];
-						info.errors.push('Line ' + (n+1) + ': ' + '[END INFORMATION] tag missing space')
+						info.errors.push('Line ' + (n+1) + ': ' + '[END INFORMATION] tag missing space');
+						parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+						parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + '[END INFORMATION] tag missing space');
 					}
 					parserState = State.ExpectSubtitle;
 					continue;
@@ -1007,6 +1037,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 					}
 					else {
 						lineErrors.push('Line ' + (n+1) + ': ' + 'Expected [END INFORMATION] tag before first subtitle line');
+						parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+						parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Expected [END INFORMATION] tag before first subtitle line');
 						n -= 1;
 						parserState = State.ExpectStartEndTimes;
 						continue;
@@ -1029,6 +1061,11 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 					parserState = State.ExpectStartEndTimes;
 					continue;
 				}
+				if(/^[0-9]+$/.test(fileline) || lineStartEndTimesRegexLooseWithPrecedingLineNumber.test(fileline)) {
+					parserState = State.ExpectStartEndTimesOrUnnecessaryLineNumber;
+					n -= 1;
+					continue;
+				}
 				if(fileline.toUpperCase().startsWith('[COLF]')
 					|| fileline.toUpperCase().startsWith('[FONT]')
 					|| fileline.toUpperCase().startsWith('[SIZE]')) {
@@ -1042,6 +1079,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 						}
 						styles[0].errors = style.errors || [ ];
 						styles[0].errors.push('Line ' + (n+1) + ': ' + 'Expected [SUBTITLE] tag before styling tags but got: "' + fileline + '"');
+						parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+						parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Expected [SUBTITLE] tag before styling tags but got: "' + fileline + '"');
 						parserState = State.ExpectStyling;
 						n -= 1;
 						continue;
@@ -1083,6 +1122,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 							else {
 								style.errors = style.errors || [ ];
 								style.errors.push('Line ' + (n+1) + ': ' + '[COLF] tag value is not a recognised colour: "' + styleValueString + '"');
+								parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+								parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + '[COLF] tag value is not a recognised colour: "' + styleValueString + '"');
 							}
 						}
 						else if(styleProp == 'fontFamily') {
@@ -1095,6 +1136,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 							else if(/^[0-9]+\.[0-9]+$/.test(styleValueString) && !strict) {
 								style.errors = style.errors || [ ];
 								style.errors.push('Line ' + (n+1) + ': ' + '[SIZE] tag value is not an integer: "' + styleValueString + '", resolved by rounding');
+								parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+								parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + '[SIZE] tag value is not an integer: "' + styleValueString + '", resolved by rounding');
 								styleValue = Math.round(styleValueString * 1);
 							}
 							else if(strict) {
@@ -1103,6 +1146,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 							else {
 								style.errors = style.errors || [ ];
 								style.errors.push('Line ' + (n+1) + ': ' + '[SIZE] tag value is not an integer: "' + styleValueString + '"');
+								parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+								parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + '[SIZE] tag value is not an integer: "' + styleValueString + '"');
 							}
 						}
 						
@@ -1121,6 +1166,36 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 				}
 			}
 			
+			if(parserState == State.ExpectStartEndTimesOrUnnecessaryLineNumber) {
+				
+				if(fileline == '') {
+					continue;
+				}
+				if(/^[0-9]+$/.test(fileline) && strict) {
+					throw new ParseException(n+1, 'Line ' + (n+1) + ': ' + 'Unexpected line number before line');
+				}
+				else if(/^[0-9]+$/.test(fileline)) {
+					// log an error and ignore the line number
+					lineErrors.push('Line ' + (n+1) + ': ' + 'Unexpected line number before line, resolved by ignoring');
+					parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+					parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Unexpected line number before line, resolved by ignoring');
+					parserState = State.ExpectStartEndTimes;
+					continue;
+				}
+				else if(lineStartEndTimesRegexLooseWithPrecedingLineNumber.test(fileline)) {
+					fileline = fileline.replace(/^[0-9]+\s+/, '');
+					lineErrors.push('Line ' + (n+1) + ': ' + 'Unexpected line number at start of line timing, resolved by ignoring');
+					parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+					parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Unexpected line number at start of line timing, resolved by ignoring');
+					parserState = State.ExpectStartEndTimes;
+					// do not continue (as that would reset the fileline), fall into next if statement instead
+				}
+				else {
+					n -= 1
+					parserState = State.ExpectStartEndTimes;
+					continue;
+				}
+			}
 			if(parserState == State.ExpectStartEndTimes) {
 				
 				if(fileline == '') {
@@ -1134,6 +1209,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 				}
 				else if(!strict && lineStartEndTimesRegexLoose.test(fileline)) {
 					lineErrors.push('Line ' + (n+1) + ': ' + 'Expected start and end times in format "h:mm:ss.SSS,h:mm:ss.SSS" but got "' + fileline + '"');
+					parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+					parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Expected start and end times in format "h:mm:ss.SSS,h:mm:ss.SSS" but got "' + fileline + '"');
 					regex = lineStartEndTimesRegexLoose;
 				}
 				else {
@@ -1164,6 +1241,8 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 						lineEnd = lineStart;
 						lineStart = temp;
 						lineErrors.push('Line ' + (n+1) + ': ' + 'Expected line end to come after line start');
+						parsedSubtitles.errors = parsedSubtitles.errors || [ ];
+						parsedSubtitles.errors.push('Line ' + (n+1) + ': ' + 'Expected line end to come after line start');
 					}
 				}
 				
@@ -1185,7 +1264,7 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 					lineEnd = null;
 					lineText = null;
 					lineErrors = [ ];
-					parserState = State.ExpectStartEndTimes;
+					parserState = State.ExpectStartEndTimesOrUnnecessaryLineNumber;
 				}
 				else {
 					if(lineText == null) {
@@ -1206,7 +1285,7 @@ Subtitler.Importer.__parseSBV = function( filecontents, strict ) {
 			lineStart = null;
 			lineEnd = null;
 			lineText = null;
-			parserState = State.ExpectLineNumber;
+			parserState = State.ExpectStartEndTimesOrUnnecessaryLineNumber;
 		}
 	}
 	catch(e) {
@@ -1223,7 +1302,6 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 			ExpectTextOrEmptyLine: 2
 		}
 		var lines = [ ];
-		var filelines = filecontents.split(/(?:\r\n|\n|\r)/);
 		
 		var subtitles = {
 			lines: lines,
@@ -1239,11 +1317,25 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 		var lineText = null;
 		var lineErrors = [ ];
 		
+		var unicodeFormFeedCharacterRegex = new RegExp('\u000C', 'g');
+		
+		if(filecontents.indexOf('\u000C') != -1) {
+			subtitles.errors = subtitles.errors || [ ];
+			subtitles.errors.push('File contains form feed characters, resolved by treating as newlines. Note, this may cause line numbers in further error messages to be inaccurate');
+			if(strict) {
+				throw new ParseException(n+1, subtitles.errors[0]);
+			}
+			filecontents = filecontents.replace(unicodeFormFeedCharacterRegex, '\n');
+		}
+		
+		var filelines = filecontents.split(/(?:\r\n|\n|\r)/);
+		
 		var unicodeObjectCharacterRegex = new RegExp('\uFFFC', 'g');
 		
 		var lineNumberRegex = /^[1-9][0-9]*$/;
 		var lineStartEndTimesRegexStrict = /^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$/;
 		var lineStartEndTimesRegexLoose = /^0?([0-9][0-9]?):0?0?([0-9][0-9]?):([0-9][0-9]?)(?:(?:,|\.|:)([0-9][0-9]?[0-9]?)0?)? ?--?-?>? ?0?([0-9][0-9]?):0?0?([0-9][0-9]):([0-9][0-9])(?:(?:,|\.|:)([0-9][0-9]?[0-9]?)0?)?$/;
+		var lineStartEndTimesRegexLooseWithPrecedingLineNumber = /^[0-9]+\s+0?([0-9][0-9]?):0?0?([0-9][0-9]?):([0-9][0-9]?)(?:(?:,|\.|:)([0-9][0-9]?[0-9]?)0?)? ?--?-?>? ?0?([0-9][0-9]?):0?0?([0-9][0-9]):([0-9][0-9])(?:(?:,|\.|:)([0-9][0-9]?[0-9]?)0?)?$/;
 		
 		var parserState = State.ExpectLineNumber;
 		for(var n=0; n<filelines.length; n++) {
@@ -1290,6 +1382,12 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 					continue;
 					
 				}
+				else if(!strict && lineStartEndTimesRegexLooseWithPrecedingLineNumber.test(fileline)) {
+					lineErrors.push('Line ' + (n+1) + ': ' + 'Line number on same line as start time');
+					lineNumber = fileline.split(/\s+/)[0] * 1;
+					fileline = fileline.replace(/^[0-9]+\s+/, '');
+					parserState = State.ExpectStartEndTimes;
+				}
 				else if(!strict && lineStartEndTimesRegexLoose.test(fileline)) {
 					lineErrors.push('Line ' + (n+1) + ': ' + 'Line number missing');
 					lineNumber = previousLineNumber + 1;
@@ -1301,7 +1399,7 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 					throw new ParseException(n+1, 'Line ' + (n+1) + ': ' + 'Expected positive line number, but found ' + fileline);
 				}
 			}
-			else if(parserState == State.ExpectStartEndTimes) {
+			if(parserState == State.ExpectStartEndTimes) {
 				
 				var regex = null;
 				if(lineStartEndTimesRegexStrict.test(fileline)) {
@@ -1346,7 +1444,7 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 				parserState = State.ExpectTextOrEmptyLine;
 				continue;
 			}
-			else if(parserState == State.ExpectTextOrEmptyLine) {
+			if(parserState == State.ExpectTextOrEmptyLine) {
 				if(fileline == '') {
 					var line = {
 						start: lineStart,
@@ -1375,6 +1473,7 @@ Subtitler.Importer.__parseSRT = function( filecontents, strict ) {
 					}
 					lineText.push(fileline);
 				}
+				continue;
 			}
 		}
 		if(lineStart != null) {

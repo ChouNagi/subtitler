@@ -1027,10 +1027,8 @@ html.supports-hover .webapp-context-menu-option:not(.TODO):hover {
 	display: flex;
 	flex-direction: column;
     align-items: center;
-    justify-content: center;
     min-width: 200px;
     min-height: 30px;
-    align-items: center;
     flex: 1;
     overflow-y: auto;
     max-height: 320px;
