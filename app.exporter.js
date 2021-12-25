@@ -42,7 +42,7 @@ Subtitler.Exporter.__setFileExtension = function( filename, extension ) {
 	}
 	
 	// remove existing extension (example.ass -> example) 
-	if(/(?:[^.]+)*[^.]+\.[^.]{1,6}$/.test(filename)) {
+	if(/[^.]+(?:\.[^.]+)*\.[^.]{1,6}$/.test(filename)) {
 		filename = filename.replace(/\.[^.]+$/, '');
 	}
 	
