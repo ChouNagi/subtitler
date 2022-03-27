@@ -2237,7 +2237,7 @@ Subtitler.Lines.__computeRichTextForm = function( line ) {
 			multiArg: false,
 			argTypes: ['int'],
 			effect: function(args, currentStyle, lineProperties) {
-				currentStyle.alignment = args[0];
+				lineProperties.alignment = args[0];
 			}
 		},
 		'a': {
@@ -3478,21 +3478,67 @@ window.setInterval(Subtitler.Audio.__playing, 15);
 
 Subtitler.Storage = { };
 
-Subtitler.Storage.save = function() {
+Subtitler.Storage.store = function(key, value) {
+	localStorage[key] = value;
+}
+Subtitler.Storage.load = function(key, defaultValue) {
+	if(localStorage.hasOwnProperty(key)) {
+		return localStorage[key];
+	}
+	return defaultValue;
+}
+Subtitler.Storage.clear = function(key) {
+	// 
+}
+
+Subtitler.Storage.Files = { };
+Subtitler.Storage.Files.root = [ ];
+Subtitler.Storage.Files.map = { };
+
+Subtitler.Storage.Files.init = function() {
+	var fileStructure = Subtitler.Storage.load('Subtitler.Storage.Files', '{ }');
+}
+
+Subtitler.Storage.Files.createFolder = function(folderName, parent) {
+	
+	var folder = {
+		'filename': folderName,
+		'modified': new Date().getTime(),
+		'id': Subtitler.Utils.uuid(),
+		'isFolder': true
+	}
+}
+
+Subtitler.Storage.Files.createFile = function(filename, filecontents, parent) {
+	
+	var metadata = {
+		'filename': filename || Subtitler.Info.filename,
+		'modified': new Date().getTime(),
+		'id': Subtitler.Utils.uuid(),
+		'data': filecontents,
+		'isFolder': false
+	}
+}
+
+Subtitler.Storage.Files.create = function(filename, parent) {
 	
 	var filecontents = Subtitler.Exporter.__convertToJSON(format);
 	
 	var metadata = {
-		'filename': Subtitler.Info.filename,
+		'filename': filename || Subtitler.Info.filename,
 		'modified': new Date().getTime(),
 		'id': Subtitler.Utils.uuid(),
-		'data': filecontents
+		'data': filecontents,
+		'isFolder': false
 	}
 	
-	// TODO - stick in localstorage
+	// TODO - store in localstorage
 }
-Subtitler.Storage.load = function(id) {
+Subtitler.Storage.loadFile = function(id) {
 	// TODO - retrieve from localstorage and pass to Subtitler.Importer.fromJSON
+}
+Subtitler.Storage.clearFile = function(id) {
+	// TODO - delete from localstorage
 }
 
 

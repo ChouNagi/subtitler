@@ -73,12 +73,27 @@ body {
 
 	<article>
 		<heading>
+			<div class="version">0.6</div>
+			<time datetime="2022-03-27T23:50:00Z">2022-03-27 23:50 (UTC)</time>
+		</heading>
+		<div class="article-content">
+			<ul>
+				<li>BugFix: Fixed issue with {an} tag not updating line properties</li>
+				<li>BugFix: Fixed issue with flicker when importing lines without end times</li>
+				<li>Feature: Added support for importing text files with the timing and text on the same line</li>
+				<li>Feature: Added crude support for importing vtt files</li>
+			</ul>
+		</div>
+	</article>
+
+	<article>
+		<heading>
 			<div class="version">0.5</div>
 			<time datetime="2021-08-29T15:30:00Z">2021-08-29 15:30 (UTC)</time>
 		</heading>
 		<div class="article-content">
 			<ul>
-				<li>BugFix: Excessively long error messages do not scroll correctly.</li>
+				<li>BugFix: Excessively long error messages do not scroll correctly</li>
 				<li>Feature: SRT and SBV parsing is now more lenient (handles form feeds and stray line numbers)</li>
 			</ul>
 		</div>
@@ -91,7 +106,7 @@ body {
 		</heading>
 		<div class="article-content">
 			<ul>
-				<li>BugFix: Incorrect CPS calculation for Spanish Text.</li>
+				<li>BugFix: Incorrect CPS calculation for Spanish Text</li>
 				<li>BugFix: Actor field hiding when editing line without actor</li>
 				<li>BugFix: Dummy videos not setting video natural dimensions</li>
 				<li>Possible BugFix: Bakemoji when exporting to txt files</li>

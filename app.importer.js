@@ -1538,6 +1538,8 @@ Subtitler.Importer.__parseCustomFormat = function( filecontents ) {
 	
 	var timeRegex = /^\s*(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?(?:\s*-?->?\s*(?:(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?))?(?:\s+°+)?\s*$/;
 	
+	var lineWithTimingRegex = /^\s*(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?(?:\s*-?->?\s*(?:(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?))?(?:\s+°+)?(?:\s*$|\s+(.*?)$)/;
+	
 	var parserState = State.ExpectHeaderOrFirstLineTiming;
 	
 	var headers = [ ];
@@ -1546,6 +1548,20 @@ Subtitler.Importer.__parseCustomFormat = function( filecontents ) {
 	var lineEnd = null;
 	var lineText = '';
 	
+	var nonBlankLines = 0;
+	var nonBlankLinesMatchingLineWithTimingRegex = 0;
+	for(var n=0; n<filelines.length; n++) {
+		if(filelines[n].trim() != '') {
+			nonBlankLines += 1;
+			if(lineWithTimingRegex.test(filelines[n])) {
+				nonBlankLinesMatchingLineWithTimingRegex += 1;
+			}
+		}
+	}
+	var expectTimingAndLineTogether = false;
+	if(nonBlankLines > 0 && ((nonBlankLinesMatchingLineWithTimingRegex/nonBlankLines) > 0.66)) {
+		expectTimingAndLineTogether = true;
+	}
 	
 	for(var n=0; n<filelines.length; n++) {
 		
@@ -1553,6 +1569,11 @@ Subtitler.Importer.__parseCustomFormat = function( filecontents ) {
 		
 		if(parserState == State.ExpectHeaderOrFirstLineTiming) {
 			if(fileline == '') {
+				continue;
+			}
+			else if(expectTimingAndLineTogether && lineWithTimingRegex.test(fileline)) {
+				parserState = State.ExpectLineTiming;
+				n -= 1;
 				continue;
 			}
 			else if(timeRegex.test(fileline)) {
@@ -1578,6 +1599,51 @@ Subtitler.Importer.__parseCustomFormat = function( filecontents ) {
 		else if(parserState == State.ExpectLineTiming) {
 			if(fileline == '') {
 				continue;
+			}
+			else if(expectTimingAndLineTogether && lineWithTimingRegex.test(fileline)) {
+				if(headers.length > 0) {
+					for(var h=0; h<headers.length; h++) {
+						var line = { 
+							text_src: headers[h],
+							start: 0,
+							end: 0,
+							isComment: true
+						};
+						subtitles.lines.push(line);
+					}
+					headers = [ ];
+				}
+				var group = fileline.match(lineWithTimingRegex);
+				
+				var startHours = (group[1] || '0') * 1;
+				var startMinutes = group[2] * 1;
+				var startSeconds = group[3] * 1;
+				var startMilliseconds = Math.round(('0.' + (group[4] || '0')) * 1000);
+				lineStart = (startHours * 3600) + (startMinutes * 60) + startSeconds + (startMilliseconds / 1000);
+				
+				if(group[7]) {
+					var endHours = (group[5] || '0') * 1;
+					var endMinutes = group[6] * 1;
+					var endSeconds = group[7] * 1;
+					var endMilliseconds = Math.round(('0.' + (group[8] || '0')) * 1000);
+					lineEnd = (endHours * 3600) + (endMinutes * 60) + endSeconds + (endMilliseconds / 1000);
+				}
+				else {
+					lineEnd = null;
+				}
+				
+				lineText = group[9] || '';
+				
+				var line = { 
+					text_src: lineText,
+					start: lineStart,
+					end: lineEnd
+				}
+				subtitles.lines.push(line);
+				parserState = State.ExpectLineTiming;
+				lineStart = null;
+				lineEnd = null;
+				lineText = '';
 			}
 			else if(timeRegex.test(fileline)) {
 				if(headers.length > 0) {
@@ -1694,7 +1760,7 @@ Subtitler.Importer.__parseCustomFormat = function( filecontents ) {
 					if(estimatedDuration < 2) {
 						estimatedDuration = 2;
 					}
-					if(nextLine && (nextLine.start != null) && nextLine.start < (line.start + estimatedDuration)) {
+					if(nextLine && (nextLine.start != null) && (nextLine.start - 0.2) < (line.start + estimatedDuration)) {
 						estimatedDuration = nextLine.start - line.start;
 					}
 					line.end = line.start + estimatedDuration;
@@ -1729,9 +1795,349 @@ Subtitler.Importer.__parseUnknown = function( filecontents ) {
 	return json;
 }
 
-Subtitler.Importer.__parseVTT = function( filecontents ) {
-	// TODO
-	return Subtitler.Importer.__parseUnknown(filecontents);
+Subtitler.Importer.__parseVTT = function( filecontents, strict ) {
+	
+	// WEBVTT - only one, right at very start
+	// NOTE - anything after is a comment
+	// STYLE
+	//  ::cue { ... }
+	//  ::cue(b) { ... }
+	//
+	//
+	// line format: 
+	//
+	//	START --> END optional styling
+	//	(times can be minutes:seconds.millis or full with hours)
+	
+	var State = {
+		ExpectWebVTT: 0,
+		ExpectStyleRegionOrFirstLine: 1,
+		ExpectMultiLineCommentThenStyleRegionOrFirstLine: 2,
+		ExpectStyleInfoOrEmptyLine: 3,
+		ExpectRegionInfoOrEmptyLine: 4,
+		ExpectMultiLineCommentThenLine: 5,
+		ExpectLineLabelOrTiming: 6,
+		ExpectLineTiming: 7,
+		ExpectLineText: 8,
+		ExpectLineTextOrEmptyLine: 9,
+		ExpectLineEmptyLine: 9
+	};
+	
+	var state = State.ExpectWebVTT;
+	
+	var lines = [ ];
+	var filelines = filecontents.split(/(?:\r\n|\n|\r)/);
+	
+	var subtitles = {
+		lines: lines,
+		styles: [ ],
+		info: { }
+	};
+	
+	// TODO - add region/style support to regex
+	var timeRegexStrict = /^\s*(?:(?:([0-9]+):)?((?:^|[0-9])[0-9]):)?((?:^|[0-9])[0-9]?)(?:\.([0-9][0-9]?[0-9]?))?\s+-->\s+(?:(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:\.([0-9][0-9]?[0-9]?))?)\s*$/;
+	var timeRegexLax = /^\s*(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?(?:\s*-?->?\s*(?:(?:(?:([0-9]+):)?([0-9][0-9]?):)?([0-9][0-9]?)(?:[.,]([0-9]+))?))(?:\s+°+)?\s*$/;
+	
+	var lineStart = null;
+	var lineEnd = null;
+	var lineLabel = null;
+	var lineText = '';
+	
+	for(var n=0; n<filelines.length; n++) {
+		var fileline = filelines[n];
+		
+		if(state == State.ExpectWebVTT) {
+			if(fileline.trim() == '') {
+				continue;
+			}
+			if(fileline.trim() == 'WEBVTT') {
+				state = State.ExpectStyleRegionOrFirstLine;
+				continue;
+			}
+			else {
+				// file is missing starting WEBVTT - recoverable
+				state = State.ExpectStyleRegionOrFirstLine;
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected WEBVTT as first line but got "' + fileline + '", pretending it was present'
+				);
+				n -= 1;
+				continue;
+			}
+		}
+		else if(state == State.ExpectStyleRegionOrFirstLine) {
+			if(fileline.trim() == '') {
+				continue;
+			}
+			if(fileline.trim() == 'REGION') {
+				state = State.ExpectRegionInfoOrEmptyLine;
+				continue;
+			}
+			if(fileline.trim() == 'STYLE') {
+				state = State.ExpectStyleInfoOrEmptyLine;
+				continue;
+			}
+			if(fileline.trim() == 'NOTE') {
+				state = State.ExpectMultiLineCommentThenStyleRegionOrFirstLine;
+				lineText = '';
+				continue;
+			}
+			else if(fileline.trim().startsWith('NOTE ') || fileline.trim().startsWith('NOTE\t')) {
+				lines.push({start: null, end: null, text_src: fileline.trim().substring(4).trim(), isComment: true });
+				continue;
+			}
+			
+			// it's not one of the allowed header fields - so we must have left the header
+			
+			state = State.ExpectLineLabelOrTiming;
+			n -= 1;
+			continue;
+		}
+		else if(state == State.ExpectMultiLineCommentThenStyleRegionOrFirstLine) {
+			if(fileline.trim() == '') {
+				lines.push({start: null, end: null, text_src: lineText, isComment: true });
+				lineText = '';
+				state = State.ExpectStyleRegionOrFirstLine;
+				continue;
+			}
+			else {
+				if(lineText.length > 0) {
+					lineText += '\n';
+				}
+				lineText += fileline;
+				continue;
+			}
+		}
+		else if(state == State.ExpectMultiLineCommentThenLine) {
+			if(fileline.trim() == '') {
+				lines.push({start: null, end: null, text_src: lineText, isComment: true });
+				lineText = '';
+				state = State.ExpectLineLabelOrTiming;
+				continue;
+			}
+			else {
+				if(lineText.length > 0) {
+					lineText += '\n';
+				}
+				lineText += fileline;
+				continue;
+			}
+		}
+		else if(state == State.ExpectStyleInfoOrEmptyLine) {
+			if(fileline.trim() == '') {
+				// TODO - style
+				state = State.ExpectStyleRegionOrFirstLine;
+				continue;
+			}
+			// TODO - currently just ignores everything in the style
+			continue;
+		}
+		else if(state == State.ExpectRegionInfoOrEmptyLine) {
+			if(fileline.trim() == '') {
+				// TODO - region
+				state = State.ExpectStyleRegionOrFirstLine;
+				continue;
+			}
+			// TODO - currently just ignores everything in the region
+			continue;
+		}
+		else if(state == State.ExpectLineLabelOrTiming) {
+			if(fileline.trim() == '') {
+				continue;
+			}
+			if(fileline.trim() == 'NOTE') {
+				state = State.ExpectMultiLineCommentThenStyleRegionOrFirstLine;
+				lineText = '';
+				continue;
+			}
+			else if(fileline.trim().startsWith('NOTE ') || fileline.trim().startsWith('NOTE\t')) {
+				lines.push({start: null, end: null, text_src: fileline.trim().substring(4).trim(), isComment: true });
+				continue;
+			}
+			else if(timeRegexLax.test(fileline.trim())) {
+				lineLabel = null;
+				state = State.ExpectLineTiming;
+				n -= 1;
+				continue;
+			}
+			else {
+				lineLabel = fileline.trim();
+				continue;
+			}
+			// TODO
+		}
+		else if(state == State.ExpectLineTiming) {
+			if(fileline.trim() == '') {
+				lineLabel = null;
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected line timing after label but got empty line, pretending previous label did not exist'
+				);
+				state = State.ExpectLineLabelOrTiming;
+				continue;
+			}
+			else if(fileline.trim() == 'NOTE') {
+				lineLabel = null;
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected line timing after label but got comment instead, pretending previous label did not exist'
+				);
+				state = State.ExpectMultiLineCommentThenStyleRegionOrFirstLine;
+				lineText = '';
+				continue;
+			}
+			else if(fileline.trim().startsWith('NOTE ') || fileline.trim().startsWith('NOTE\t')) {
+				lineLabel = null;
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected line timing after label but got comment instead, pretending previous label did not exist'
+				);
+				state = State.ExpectLineLabelOrTiming;
+				lines.push({start: null, end: null, text_src: fileline.trim().substring(4).trim(), isComment: true });
+				continue;
+			}
+			else if(!timeRegexLax.test(fileline.trim())) {
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected line timing after label but got "' + fileline + '", pretending previous label did not exist and using this as the label'
+				);
+				lineLabel = fileline;
+				state = State.ExpectLineTiming;
+				continue;
+			}
+			
+			if(!timeRegexStrict.test(fileline.trim())) {
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected line timing in correct format but got "' + fileline + '", but able to interpret intended timestamp despite this'
+				);
+			}
+			
+			var group = fileline.match(timeRegexLax);
+			
+			var startHours = group[1] * 1;
+			var startMinutes = group[2] * 1;
+			var startSeconds = group[3] * 1;
+			var startMilliseconds = Math.round(('0.' + (group[4] || '0')) * 1000);
+			
+			var endHours = group[5] * 1;
+			var endMinutes = group[6] * 1;
+			var endSeconds = group[7] * 1;
+			var endMilliseconds = Math.round(('0.' + (group[8] || '0')) * 1000);
+			
+			lineStart = (startHours * 3600) + (startMinutes * 60) + startSeconds + (startMilliseconds / 1000);
+			lineEnd = (endHours * 3600) + (endMinutes * 60) + endSeconds + (endMilliseconds / 1000);
+			
+			if(lineStart > lineEnd) {
+				subtitles.errors = subtitles.errors || [ ];
+				subtitles.errors.push(
+					'Line ' + (n+1) + ': ' + 'Expected line end to come after line start'
+				);
+				var temp = lineEnd;
+				lineEnd = lineStart;
+				lineStart = temp;
+			}
+			
+			// TODO - extract styling and region info
+			
+			state = State.ExpectLineText;
+			lineText = '';
+			continue;
+		}
+		else if(state == State.ExpectLineText) {
+			if(fileline.trim() == '') {
+				lines.push({start: lineStart, end: lineEnd, text_src: fileline, isComment: false });
+				state = State.ExpectLineLabelOrTiming;
+				lineStart = null;
+				lineEnd = null;
+				lineText = '';
+				state = State.ExpectEmptyLine;
+				continue;
+			}
+			else {
+				if(lineText != '') {
+					lineText += '\n';
+				}
+				lineText += fileline;
+				state = State.ExpectLineTextOrEmptyLine;
+				continue;
+			}
+		}
+		else if(state == State.ExpectLineTextOrEmptyLine) {
+			if(fileline.trim() == '') {
+				lines.push({start: lineStart, end: lineEnd, text_src: lineText, isComment: false });
+				state = State.ExpectLineLabelOrTiming;
+				lineStart = null;
+				lineEnd = null;
+				lineText = '';
+				continue;
+			}
+			else {
+				if(lineText != '') {
+					lineText += '\n';
+				}
+				lineText += fileline;
+				continue;
+			}
+		}
+		else if(state == State.ExpectLineEmptyLine) {
+			if(fileline.trim() == '') {
+				state = State.ExpectLineLabelOrTiming;
+				continue;
+			}
+			// TODO - complain
+			n -= 1;
+			state = State.ExpectLineLabelOrTiming;
+			continue;
+		}
+		else {
+			// TODO
+		}
+	}
+	
+	// iterate through comments and set start + end times based on next line
+	for(var n=subtitles.lines.length-1; n>=0; n--) {
+		var line = subtitles.lines[n];
+		if(!line.isComment) {
+			// all normal lines will be correctly formatted
+			continue;
+		}
+		var previousLine = subtitles.lines[n-1] || null;
+		var nextLine = subtitles.lines[n+1] || null;
+		if(line.end == null) {
+			if(nextLine != null && nextLine.start != null) {
+				line.end = nextLine.start;
+			}
+		}
+		if(line.start == null) {
+			line.start = line.end;
+		}
+	}
+	for(var n=0; n<subtitles.lines.length; n++) {
+		var line = subtitles.lines[n];
+		if(!line.isComment) {
+			continue;
+		}
+		var previousLine = subtitles.lines[n-1] || null;
+		var nextLine = subtitles.lines[n+1] || null;
+		if(line.start == null && line.end == null && nextLine != null && nextLine.start != null ) {
+			line.end = nextLine.start;
+		}
+		if(line.start == null) {
+			line.start = line.end;
+		}
+		if(line.start == null) {
+			// only possible if all lines are comments
+			line.start = 0;
+		}
+		if(line.end == null) {
+			line.end = line.start;
+		}
+	}
+	
+	// TODO - strict
+	
+	return subtitles;
 }
 
 Subtitler.Importer.__parseYTT = function( filecontents ) {

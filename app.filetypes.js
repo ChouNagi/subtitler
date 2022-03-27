@@ -5,7 +5,7 @@ Subtitler.FileTypes = Subtitler.FileTypes || { };
 Subtitler.FileTypes.ASS = Subtitler.FileTypes.Aegisub = 'ass';
 Subtitler.FileTypes.SBV = Subtitler.FileTypes.SubViewer = 'sbv';
 Subtitler.FileTypes.SRT = Subtitler.FileTypes.SubRip = 'srt';
-Subtitler.FileTypes.VTT = Subtitler.FileTypes.WebVTT = 'sbv';
+Subtitler.FileTypes.VTT = Subtitler.FileTypes.WebVTT = 'vtt';
 Subtitler.FileTypes.YTT = Subtitler.FileTypes.YoutubeTimedText = 'ytt';
 Subtitler.FileTypes.JSON = 'json';
 Subtitler.FileTypes.TXT = 'txt';

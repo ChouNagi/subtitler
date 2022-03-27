@@ -1,2 +1,2 @@
 Subtitler = window.Subtitler || { };
-Subtitler.version = '0.5';
+Subtitler.version = '0.6';
