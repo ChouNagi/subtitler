@@ -3497,6 +3497,10 @@ Subtitler.Storage.Files.map = { };
 
 Subtitler.Storage.Files.init = function() {
 	var fileStructure = Subtitler.Storage.load('Subtitler.Storage.Files', '{ }');
+	for(var id in fileStructure) {
+		var file = fileStructure[id];
+		Subtitler.Storage.Files.map[id] = file;
+	}
 }
 
 Subtitler.Storage.Files.createFolder = function(folderName, parent) {
@@ -3507,33 +3511,23 @@ Subtitler.Storage.Files.createFolder = function(folderName, parent) {
 		'id': Subtitler.Utils.uuid(),
 		'isFolder': true
 	}
+	
+	Subtitler.Storage.Files.__create(folder, parent);
 }
 
 Subtitler.Storage.Files.createFile = function(filename, filecontents, parent) {
 	
-	var metadata = {
-		'filename': filename || Subtitler.Info.filename,
+	var file = {
+		'filename': filename,
 		'modified': new Date().getTime(),
 		'id': Subtitler.Utils.uuid(),
 		'data': filecontents,
 		'isFolder': false
 	}
+	
+	Subtitler.Storage.Files.__create(file, parent);
 }
 
-Subtitler.Storage.Files.create = function(filename, parent) {
-	
-	var filecontents = Subtitler.Exporter.__convertToJSON(format);
-	
-	var metadata = {
-		'filename': filename || Subtitler.Info.filename,
-		'modified': new Date().getTime(),
-		'id': Subtitler.Utils.uuid(),
-		'data': filecontents,
-		'isFolder': false
-	}
-	
-	// TODO - store in localstorage
-}
 Subtitler.Storage.loadFile = function(id) {
 	// TODO - retrieve from localstorage and pass to Subtitler.Importer.fromJSON
 }

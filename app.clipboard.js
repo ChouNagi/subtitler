@@ -124,7 +124,7 @@ Subtitler.Clipboard.paste = function( insertionPoint, insertionMode) {
 Subtitler.Clipboard.__getPastableLine = function(line) {
 	
 	var lineToPaste = line;
-	var lineAlreadyExists = false;
+	var lineAlreadyExists = (line.id != null && Subtitler.Lines.map[line.id] != null);
 	
 	if(lineAlreadyExists) {
 		lineToPaste = { };

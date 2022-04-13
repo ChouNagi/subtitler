@@ -337,13 +337,13 @@ Subtitler.Exporter.__convertToVTT = function( ) {
 		nonCommentLineCount += 1;
 		outputLines.push(nonCommentLineCount + '');
 		outputLines.push(
-			Subtitler.Formatting.formatTimeSRT(line.start)
+			Subtitler.Formatting.formatTimeSBV(line.start)
 			+ ' --> '
-			+ Subtitler.Formatting.formatTimeSRT(line.end)
+			+ Subtitler.Formatting.formatTimeSBV(line.end)
 		);
 		var textContent = line.text_plain.split('\n');
 		for(var t=0; t<textContent.length; t++) {
-			outputLines.push('- ' + textContent[t])
+			outputLines.push(textContent[t])
 		}
 		outputLines.push('');
 	}

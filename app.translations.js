@@ -119,6 +119,11 @@ Subtitler.Translations['en'] = {
 	actorWarningPopupButtonNo: 'No',
 	actorWarningPopupButtonYes: 'Yes',
 	
+	autotranscribedWarningPopupTitle: 'Warning',
+	autotranscribedWarningPopupMessage: 'A significant number of lines appear to be comments indicating the confidence of an automated transcription process. Do you wish to remove these comments to reduce clutter?',
+	autotranscribedWarningPopupButtonNo: 'No',
+	autotranscribedWarningPopupButtonYes: 'Yes',
+	
 	unknownImportWarningPopupTitle: 'Warning',
 	unknownImportWarningPopupMessage: 'The subtitle format could not be inferred.\nDo you want to import every line as a separate subtitle without any timing information?',
 	unknownImportWarningPopupButtonProceed: 'Proceed',
@@ -315,7 +320,7 @@ Subtitler.Translations['en'] = {
 	webappStyleEditorPopupMisc: 'Miscellaneous',
 	webappStyleEditorPopupScaleX: 'Scale X (%)',
 	webappStyleEditorPopupScaleY: 'Scale Y (%)',
-	webappEditStyleRotation: 'Rotation (degs)',
+	webappStyleEditorPopupRotation: 'Rotation (degs)',
 	webappStyleEditorPopupSpacing: 'Spacing',
 	webappStyleEditorPopupEncoding: 'Encoding',
 	webappStyleEditorPopupOutlineEncoding0: '0 - ANSI',

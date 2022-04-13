@@ -153,6 +153,49 @@ Subtitler.Importer.fromJSON = function( json, strict, filename ) {
 	
 }
 
+Subtitler.Importer.__checkAutoTranscribedConfidenceCommentsThenLoad = function( json, filename ) {
+	
+	var confidenceRegex = /^\s*confidence(?::|\s)\s*\d+(?:\.\d+)?%?\s*$/i;
+	var commentsMatchingConfidenceRegex = 0;
+	for(var n=0; n<json.lines.length; n++) {
+		if(json.lines[n].isComment && confidenceRegex.test(json.lines[n].text_src || '')) {
+			commentsMatchingConfidenceRegex += 1;
+		}
+	}
+	if(json.lines.length > 0 && commentsMatchingConfidenceRegex > 5 && (commentsMatchingConfidenceRegex/json.lines.length) > 0.25) {
+		// TODO - only show popup if settings require it
+		Subtitler.Popup.show(
+			Subtitler.Translations.get('autotranscribedWarningPopupTitle'),
+			Subtitler.Translations.get('autotranscribedWarningPopupMessage'),
+			[
+				{
+					label: Subtitler.Translations.get('autotranscribedWarningPopupButtonNo'),
+					callback: function() {
+						Subtitler.Importer.__load(json, filename);
+					}
+				},
+				{
+					label: Subtitler.Translations.get('autotranscribedWarningPopupButtonYes'),
+					callback: function() {
+						var linesToKeep = [ ];
+						for(var n=0; n<json.lines.length; n++) {
+							if(json.lines[n].isComment && confidenceRegex.test(json.lines[n].text_src || '')) {
+								continue;
+							}
+							linesToKeep.push(json.lines[n]);
+						}
+						json.lines = linesToKeep;
+						Subtitler.Importer.__load(json, filename);
+					}
+				}
+			]
+		);
+	}
+	else {
+		Subtitler.Importer.__load(json, filename);
+	}
+}
+
 Subtitler.Importer.__checkActorThenLoad = function( json, filename ) {
 	var linesStartingWithActorPrefix = 0;
 	for(var n=0; n<json.lines.length; n++) {
@@ -170,7 +213,7 @@ Subtitler.Importer.__checkActorThenLoad = function( json, filename ) {
 				{
 					label: Subtitler.Translations.get('actorWarningPopupButtonNo'),
 					callback: function() {
-						Subtitler.Importer.__load(json, filename);
+						Subtitler.Importer.__checkAutoTranscribedConfidenceCommentsThenLoad(json, filename);
 					}
 				},
 				{
@@ -179,14 +222,14 @@ Subtitler.Importer.__checkActorThenLoad = function( json, filename ) {
 						for(var n=0; n<json.lines.length; n++) {
 							json.lines[n].text_src = json.lines[n].text_src.replace(/^>> /, '');
 						}
-						Subtitler.Importer.__load(json, filename);
+						Subtitler.Importer.__checkAutoTranscribedConfidenceCommentsThenLoad(json, filename);
 					}
 				}
 			]
 		);
 	}
 	else {
-		Subtitler.Importer.__load(json, filename);
+		Subtitler.Importer.__checkAutoTranscribedConfidenceCommentsThenLoad(json, filename);
 	}
 }
 
