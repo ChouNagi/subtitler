@@ -66,7 +66,7 @@ Subtitler.Clipboard.paste = function( insertionPoint, insertionMode) {
 	
 		var linesToPaste = [ ];
 		for(var n=0; n<Subtitler.Clipboard.contents.length; n++) {
-			linesToPaste.push(Subtitler.Clipboard.__getPastableLine(Subtitler.Clipboard.contents[n]));
+			linesToPaste.push(Subtitler.Clipboard.__getPasteableLine(Subtitler.Clipboard.contents[n]));
 		}
 		if(insertionMode == 'before') {
 			for(var n=0; n<linesToPaste.length; n++) {
@@ -121,7 +121,7 @@ Subtitler.Clipboard.paste = function( insertionPoint, insertionMode) {
 	}
 }
 
-Subtitler.Clipboard.__getPastableLine = function(line) {
+Subtitler.Clipboard.__getPasteableLine = function(line) {
 	
 	var lineToPaste = line;
 	var lineAlreadyExists = (line.id != null && Subtitler.Lines.map[line.id] != null);

@@ -68,6 +68,7 @@ Subtitler.Translations['en'] = {
 	webappMenuLoadVideo: 'Load Video',
 	webappMenuLoadAudio: 'Load Audio',
 	webappMenuUseDummyVideo: 'Use Dummy Video',
+	webappMenuTiming: 'Shift Timing',
 	webappMenuStyles: 'Edit Styles',
 	webappMenuProperties: 'Edit Properties',
 	webappMenuExport: 'Export...',
@@ -398,6 +399,24 @@ Subtitler.Translations['en'] = {
 	webappDummyVideoPopupButtonOK: 'OK',
 	webappDummyVideoPopupButtonCancel: 'Cancel',
 	
+	webappShiftTimingPopupTitle: 'Shift Timing',
+	webappShiftTimingPopupTime: 'Time',
+	webappShiftTimingPopupFrame: 'Frame',
+	webappShiftTimingPopupDirectionForwards: 'Forwards',
+	webappShiftTimingPopupDirectionForwardsTooltip: 'Shifts subs forwards, making them appear later. Use if they are appearing too soon.',
+	webappShiftTimingPopupDirectionBackwards: 'Backwards',
+	webappShiftTimingPopupDirectionBackwardsTooltip: 'Shifts subs backwards, making them appear earlier. Use if they are appearing too late.',
+	webappShiftTimingPopupLinesAffected: 'Affect',
+	webappShiftTimingPopupLinesAffectedAll: 'All Lines',
+	webappShiftTimingPopupLinesAffectedSelection: 'Selected Lines',
+	webappShiftTimingPopupLinesAffectedSelectionOnwards: 'Selection Onwards',
+	webappShiftTimingPopupShift: 'Shift Times',
+	webappShiftTimingPopupShiftStartAndEndTimes: 'Start and End Times',
+	webappShiftTimingPopupShiftStartTimes: 'Start Times only',
+	webappShiftTimingPopupShiftEndTimes: 'End Times only',
+	
+	webappShiftTimingPopupButtonCancel: 'Cancel',
+	webappShiftTimingPopupButtonApply: 'Apply',
 }
 
 

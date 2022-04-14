@@ -2826,6 +2826,35 @@ Subtitler.Lines.updateLine = function( lineOrLineId ) {
 	Subtitler.Visualiser.updateOverlay(line);
 }
 
+Subtitler.Lines.isSelected = function( lineIdOrElement ) {
+	var id = null;
+	if(lineIdOrElement instanceof HTMLElement && lineIdOrElement.hasAttribute('data-subtitle-id')) {
+		id = lineIdOrElement.getAttribute('data-subtitle-id');
+	}
+	else if(typeof lineIdOrElement == 'object' && lineIdOrElement.hasOwnProperty('id')) {
+		id = lineIdOrElement.id;
+	}
+	else if(typeof lineIdOrElement == 'string') {
+		id = lineIdOrElement;
+	}
+	else if(typeof lineIdOrElement == 'number') {
+		var line = this.list[lineIdOrElement];
+		if(line) {
+			id = line.id;
+		}
+	}
+	
+	if(Subtitler.LineEditor.lineId == null) {
+		return false;
+	}
+	
+	if(!id) {
+		return false;
+	}
+	
+	return (Subtitler.LineEditor.lineId == id);
+}
+
 Subtitler.Lines.selectLine = function( lineIdOrElement ) {
 	var id = null;
 	if(lineIdOrElement instanceof HTMLElement && lineIdOrElement.hasAttribute('data-subtitle-id')) {
@@ -3304,6 +3333,11 @@ document.querySelector('.webapp-mobile-menu-toggle-button').addEventListener('cl
 	document.querySelector('.webapp-menu').classList.toggle('webapp-menu-open');
 });
 
+document.querySelector('.webapp-menu-timing').addEventListener('click', function() {
+	Subtitler.TimingPopup.show();
+	closeMenu();
+});
+
 document.querySelector('.webapp-menu-styles').addEventListener('click', function() {
 	Subtitler.StylesPopup.show();
 	closeMenu();
@@ -3503,29 +3537,40 @@ Subtitler.Storage.Files.init = function() {
 	}
 }
 
-Subtitler.Storage.Files.createFolder = function(folderName, parent) {
+Subtitler.Storage.Files.createFolder = function(parent, folderName) {
 	
 	var folder = {
 		'filename': folderName,
 		'modified': new Date().getTime(),
-		'id': Subtitler.Utils.uuid(),
 		'isFolder': true
 	}
 	
 	Subtitler.Storage.Files.__create(folder, parent);
 }
 
-Subtitler.Storage.Files.createFile = function(filename, filecontents, parent) {
+Subtitler.Storage.Files.createFile = function(parent, filename, filecontents, mimetype) {
 	
 	var file = {
 		'filename': filename,
 		'modified': new Date().getTime(),
-		'id': Subtitler.Utils.uuid(),
 		'data': filecontents,
 		'isFolder': false
+	};
+	
+	if(mimetype) {
+		file.mimetype = mimetype;
 	}
 	
 	Subtitler.Storage.Files.__create(file, parent);
+}
+
+Subtitler.Storage.Files.__create = function(fileOrFolder, parent) {
+	if(fileOrFolder.id == null) {
+		fileOrFolder.id = Subtitler.Utils.uuid();
+	}
+	if(!fileOrFolder.isFolder && fileOrFolder.mimetype == null) {
+		// TODO - infer mimetype
+	}
 }
 
 Subtitler.Storage.loadFile = function(id) {

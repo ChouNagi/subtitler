@@ -47,6 +47,11 @@
 					<span class="webapp-menu-item-label" data-translation-key="webappMenuUseDummyVideo"></span>
 				</div>
 				<div class="webapp-menu-separator"></div>
+				<div class="webapp-menu-item webapp-menu-timing">
+					<span class="webapp-menu-item-icon webapp-menu-timing-icon"></span>
+					<span class="webapp-menu-item-label" data-translation-key="webappMenuTiming"></span>
+				</div>
+				<div class="webapp-menu-separator"></div>
 				<div class="webapp-menu-item webapp-menu-styles">
 					<span class="webapp-menu-item-icon webapp-menu-styles-icon"></span>
 					<span class="webapp-menu-item-label" data-translation-key="webappMenuStyles"></span>
@@ -1258,181 +1263,279 @@
 			</div>
 		</div>
 	</div>
+	
 	<div class="webapp-persistent-popup-overlay colour-chooser-popup">
 		<div class="popup-overlay-fade"></div>
-			<div class="popup-wrapper">
-				<div class="popup">
-					<div class="popup-header">
-						<div class="popup-title" data-translation-key="webappColourChooserPopupTitle"></div>
+		<div class="popup-wrapper">
+			<div class="popup">
+				<div class="popup-header">
+					<div class="popup-title" data-translation-key="webappColourChooserPopupTitle"></div>
+				</div>
+				<div class="popup-body">
+					<div class="popup-content">
+						<div class="colour-spectrum-and-preview-block">
+							<div class="colour-preview-row">
+								<div class="colour-preview-wrapper">
+									<div class="colour-preview"></div>
+								</div>
+							</div>
+							<div class="colour-spectrum-wrapper">
+								<div class="label" data-translation-key="webappColourChooserPopupColourSpectrum"></div>
+								<div class="colour-spectrum">
+									<div class="colour-spectrum-square"></div>
+									<div class="colour-spectrum-hue-slider"></div>
+									<div class="colour-spectrum-alpha-slider"></div>
+								</div>
+							</div>
+						</div>
+						<div class="colour-input-boxes">
+							<div class="rgb-and-other">
+								<div class="rgb">
+									<div class="label" data-translation-key="webappColourChooserPopupRGB"></div>
+									<div class="inputs">
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupRed"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-rgb-red numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupGreen"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-rgb-green numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupBlue"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-rgb-blue numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="other">
+									<div class="inputs">
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupAlpha"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-other-alpha numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupHtml"></div>
+											<input class="colour-chooser-other-html colour-input-html" type="text" />
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupAegisubBGR"></div>
+											<input class="colour-chooser-other-aegisub colour-input-aegisub" type="text" />
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="hsl-and-hsv">
+								<div class="hsl">
+									<div class="label" data-translation-key="webappColourChooserPopupHSL"></div>
+									<div class="inputs">
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupHue"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-hsl-hue numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />													<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupSaturation"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-hsl-saturation numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupLuminosity"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-hsl-luminosity numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="hsv">
+									<div class="label" data-translation-key="webappColourChooserPopupHSV"></div>
+									<div class="inputs">
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupHue"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-hsv-hue numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupSaturation"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-hsv-saturation numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+										<div class="input-and-label">
+											<div class="label" data-translation-key="webappColourChooserPopupValue"></div>
+											<div class="numeric-input-wrapper">
+												<input class="colour-chooser-hsv-value numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
+												<div class="numeric-input-adjustment-arrows">
+													<div class="numeric-input-adjustment-arrow-increase"></div>
+													<div class="numeric-input-adjustment-arrow-separator"></div>
+													<div class="numeric-input-adjustment-arrow-decrease"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
-					<div class="popup-body">
-						<div class="popup-content">
-							<div class="colour-spectrum-and-preview-block">
-								<div class="colour-preview-row">
-									<div class="colour-preview-wrapper">
-										<div class="colour-preview"></div>
-									</div>
-								</div>
-								<div class="colour-spectrum-wrapper">
-									<div class="label" data-translation-key="webappColourChooserPopupColourSpectrum"></div>
-									<div class="colour-spectrum">
-										<div class="colour-spectrum-square"></div>
-										<div class="colour-spectrum-hue-slider"></div>
-										<div class="colour-spectrum-alpha-slider"></div>
-									</div>
-								</div>
-							</div>
-							<div class="colour-input-boxes">
-								<div class="rgb-and-other">
-									<div class="rgb">
-										<div class="label" data-translation-key="webappColourChooserPopupRGB"></div>
-										<div class="inputs">
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupRed"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-rgb-red numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupGreen"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-rgb-green numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupBlue"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-rgb-blue numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-									<div class="other">
-										<div class="inputs">
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupAlpha"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-other-alpha numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupHtml"></div>
-												<input class="colour-chooser-other-html colour-input-html" type="text" />
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupAegisubBGR"></div>
-												<input class="colour-chooser-other-aegisub colour-input-aegisub" type="text" />
-											</div>
-										</div>
-									</div>
-								</div>
-								<div class="hsl-and-hsv">
-									<div class="hsl">
-										<div class="label" data-translation-key="webappColourChooserPopupHSL"></div>
-										<div class="inputs">
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupHue"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-hsl-hue numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupSaturation"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-hsl-saturation numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupLuminosity"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-hsl-luminosity numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-									<div class="hsv">
-										<div class="label" data-translation-key="webappColourChooserPopupHSV"></div>
-										<div class="inputs">
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupHue"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-hsv-hue numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupSaturation"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-hsv-saturation numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-											<div class="input-and-label">
-												<div class="label" data-translation-key="webappColourChooserPopupValue"></div>
-												<div class="numeric-input-wrapper">
-													<input class="colour-chooser-hsv-value numeric-input" value="0" data-format="number" data-min="0"data-step="1" data-max="255" />
-													<div class="numeric-input-adjustment-arrows">
-														<div class="numeric-input-adjustment-arrow-increase"></div>
-														<div class="numeric-input-adjustment-arrow-separator"></div>
-														<div class="numeric-input-adjustment-arrow-decrease"></div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="popup-buttons">
-							<div class="popup-button colour-chooser-popup-cancel" data-translation-key="webappColourChooserPopupButtonCancel"></div>
-							<div class="popup-button colour-chooser-popup-ok" data-translation-key="webappColourChooserPopupButtonOK"></div>
-						</div>
+					<div class="popup-buttons">
+						<div class="popup-button colour-chooser-popup-cancel" data-translation-key="webappColourChooserPopupButtonCancel"></div>
+						<div class="popup-button colour-chooser-popup-ok" data-translation-key="webappColourChooserPopupButtonOK"></div>
 					</div>
 				</div>
 			</div>
+		</div>
 	</div>
+	
+	<div class="webapp-persistent-popup-overlay shift-timing-popup">
+		<div class="popup-overlay-fade"></div>
+		<div class="popup-wrapper">
+			<div class="popup">
+				<div class="popup-header">
+					<div class="popup-title" data-translation-key="webappShiftTimingPopupTitle"></div>
+				</div>
+				<div class="popup-body">
+					<div class="popup-content">
+						<div class="row">
+							<div class="label" data-translation-key="webappShiftTimingPopupShiftBy"></div>
+							<div class="timing-shift-by">
+								<div class="input-and-label">
+									<div class="label" data-translation-key="webappShiftTimingPopupTime"></div>
+									<input type="text" class="temporal-input webapp-shift-timing-time" data-format="h:mm:ss.SS" value="0:00:00.00" data-value="0">
+								</div>
+							</div>
+							<div class="webapp-shift-timing-shift-direction">
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-direction" type="radio" value="forwards" name="shift-timing-direction" checked="checked" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupDirectionForwards"></div>
+									</label>
+								</div>
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-direction" type="radio" value="backwards" name="shift-timing-direction" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupDirectionBackwards"></div>
+									</label>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="label" data-translation-key="webappShiftTimingPopupLinesAffected"></div>
+							<div class="webapp-shift-timing-lines-affected">
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-lines-affected" type="radio" value="all-lines" name="shift-timing-lines-affected" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupLinesAffectedAll"></div>
+									</label>
+								</div>
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-lines-affected" type="radio" value="selection-only" name="shift-timing-lines-affected" checked="checked" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupLinesAffectedSelection"></div>
+									</label>
+								</div>
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-lines-affected" type="radio" value="selection-onwards" name="shift-timing-lines-affected" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupLinesAffectedSelectionOnwards"></div>
+									</label>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="label" data-translation-key="webappShiftTimingPopupShift"></div>
+							<div class="webapp-shift-timing-times-shifted">
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-times-to-shift" type="radio" value="start-and-end-times" name="shift-timing-times-to-shift" checked="checked" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupShiftStartAndEndTimes"></div>
+									</label>
+								</div>
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-times-to-shift" type="radio" value="start-times-only" name="shift-timing-times-to-shift" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupShiftStartTimes"></div>
+									</label>
+								</div>
+								<div class="radio-and-label">
+									<label>
+										<input class="webapp-shift-timing-times-to-shift" type="radio" value="end-times-only" name="shift-timing-times-to-shift" />
+										<div class="pseudo-radio"></div>
+										<div class="label" data-translation-key="webappShiftTimingPopupShiftEndTimes"></div>
+									</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="popup-buttons">
+						<div class="popup-button shift-timing-popup-close" data-translation-key="webappShiftTimingPopupButtonCancel"></div>
+						<div class="popup-button shift-timing-popup-apply" data-translation-key="webappShiftTimingPopupButtonApply"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
 	<div class="webapp-persistent-popup-overlay settings-popup">
 		<div class="popup-overlay-fade"></div>
 			<div class="popup-wrapper">
@@ -1723,6 +1826,7 @@
 <script src="app.colourpicker.js"></script>
 <script src="app.styleeditor.js"></script>
 <script src="app.stylespopup.js"></script>
+<script src="app.timing.js"></script>
 <script src="app.info.js"></script>
 <script src="app.dummy.js"></script>
 <script src="app.js"></script>
