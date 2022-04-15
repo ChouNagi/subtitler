@@ -261,7 +261,7 @@ document.addEventListener('keydown', function(e) {
 				finalCaretPosition = Math.min(e.target.value.length, initialCaretPosition+1);
 			}
 		}
-		else if(e.which == 86 && e.ctrlKey
+		else if(e.which == 67 && e.ctrlKey
 			|| e.which == 86 && e.ctrlKey) {
 			// CTRL + C = paste
 			// CTRL + X = cut (but treat as copy)
@@ -442,4 +442,160 @@ document.addEventListener('change', function(e) {
 			cancelable: true
 		}));
 	}
+});
+
+document.addEventListener('paste', function(e) {
+	var paste = (e.clipboardData || window.clipboardData || { getData: function() { return null; } }).getData('text');
+	var selection = window.getSelection();
+	
+	if(e && e.target && e.target.matches('.temporal-input')) {
+		console.log('paste into temporal input');
+		console.log('value: ' + e.target.value);
+		console.log('data-value: ' + e.target.getAttribute('data-value'));
+		console.log('text: ' + paste);
+		
+		e.preventDefault();
+		
+		var dataFormat = e.target.getAttribute('data-format') || '';
+		
+		var initialValue = e.target.value || '';
+		var finalValue = initialValue;
+		
+		// first, check if value being pasted in is in valid format
+		// if so, just set value, fire triggers, and return
+		
+		if(dataFormat.indexOf('0') != -1) {
+			if(dataFormat.split(/[,.]/g).length <= 2) {
+				dataFormat = dataFormat
+							.replace(/^0000$/,'mmss')
+							.replace(/^000000$/,'hhmmss')
+							.replace(/0[.,]0/,'s.S')
+							.replace(/0s/,'ss')
+							.replace(/S0/,'SS')
+							.replace(/S0/,'SS')
+							.replace(/S0/,'SS')
+							.replace(/0:s/,'m:s')
+							.replace(/0m/,'mm')
+							.replace(/0:m/,'h:m')
+							.replace(/0h/,'hh')
+							;
+			}
+		}
+		
+		var partIndex = 0;
+		var partSubIndex = 0;
+		var parts = dataFormat.split(/[^hmsS0]/g);
+		var partsValueMapping = [ ];
+		for(var p=0; p<parts.length; p++) {
+			partsValueMapping[p] = {
+				pattern: parts[p],
+				value: ''
+			}
+		}
+		for(var v=0; v<paste.length; v++) {
+			if('0123456789'.indexOf(paste[v]) != -1) {
+				var part = partsValueMapping[partIndex];
+				part.value = part.value + paste[v];
+				partSubIndex += 1;
+				if(part.pattern.length != 1 && part.pattern.length == part.value.length) {
+					partIndex += 1;
+					partSubIndex = 0;
+				}
+			}
+			else if(partSubIndex != 0) {
+				partIndex += 1;
+				partSubIndex = 0;
+			}
+		}
+		
+		var numericValue = 0;
+		for(var p=0; p<partsValueMapping.length; p++) {
+			var number = (partsValueMapping[p].value == '') ? NaN : (partsValueMapping[p].value * 1);
+			var type = partsValueMapping[p].pattern[0];
+			if(type == 'S' && /[.,]S/.test(dataFormat)) {
+				number = (('0.' + partsValueMapping[p].value) * 1000);
+			}
+			var factor = { 'h': 3600, 'H': 3600, 'm': 60, 'M': 60, 's': 1, 'S': 0.001 }[type];
+			var component = factor * number;
+			numericValue += component;
+		}
+		
+		if(!Number.isNaN(numericValue)) {
+			finalValue = paste;
+		}
+		else {
+			
+			// the entire paste isn't a perfect match for the data format
+			
+			var valueWithPasteInserted = paste;
+			
+			// TODO: insert the paste text at the selection position overwriting, and check if the resulting format is valid
+			
+			partIndex = 0;
+			partSubIndex = 0;
+			parts = dataFormat.split(/[^hmsS0]/g);
+			partsValueMapping = [ ];
+			for(var p=0; p<parts.length; p++) {
+				partsValueMapping[p] = {
+					pattern: parts[p],
+					value: ''
+				}
+			}
+			for(var v=0; v<valueWithPasteInserted.length; v++) {
+				if('0123456789'.indexOf(valueWithPasteInserted[v]) != -1) {
+					var part = partsValueMapping[partIndex];
+					part.value = part.value + valueWithPasteInserted[v];
+					partSubIndex += 1;
+					if(part.pattern.length != 1 && part.pattern.length == part.value.length) {
+						partIndex += 1;
+						partSubIndex = 0;
+					}
+				}
+				else if(partSubIndex != 0) {
+					partIndex += 1;
+					partSubIndex = 0;
+				}
+			}
+			
+			numericValue = 0;
+			for(var p=0; p<partsValueMapping.length; p++) {
+				var number = (partsValueMapping[p].value == '') ? NaN : (partsValueMapping[p].value * 1);
+				var type = partsValueMapping[p].pattern[0];
+				if(type == 'S' && /[.,]S/.test(dataFormat)) {
+					number = (('0.' + partsValueMapping[p].value) * 1000);
+				}
+				var factor = { 'h': 3600, 'H': 3600, 'm': 60, 'M': 60, 's': 1, 'S': 0.001 }[type];
+				var component = factor * number;
+				numericValue += component;
+			}
+			
+			if(!Number.isNaN(numericValue)) {
+				finalValue = valueWithPasteInserted;
+			}
+		}
+		
+		if(finalValue != initialValue) {
+			// parse value, convert to time in seconds and set data-value
+			
+			e.target.value = finalValue;
+			e.target.setAttribute('data-value', numericValue+'');
+			
+			e.target.dispatchEvent(new CustomEvent("value-modified", {
+				detail: {
+					'value': numericValue,
+					'text': finalValue
+				},
+				bubbles: true,
+				cancelable: true
+			}));
+			
+			return false;
+		}
+	}
+
+//	if (!selection.rangeCount) return false;
+//	selection.deleteFromDocument();
+//	selection.getRangeAt(0).insertNode(document.createTextNode(paste));
+//
+//	event.preventDefault();
 });

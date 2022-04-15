@@ -34,7 +34,7 @@ If you insist:
 
 #### I want to translate it to another language
 
-All the text is in the app.translations.js file
+All the text is in the app.translations.js file.  
 Feel free to make add a new translation map under the region code and submit a pull request.
 
 Though why you want to expose more people to this is beyond me
