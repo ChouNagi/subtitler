@@ -1543,7 +1543,7 @@ Subtitler.Lines.__onLineRightClick = function(e) {
 		if(!Subtitler.Lines.isLineSelected(line)) {
 			Subtitler.Lines.selectLine(line, true);
 		}
-		Subtitler.Lines.makeLineActive(line);
+		//Subtitler.Lines.makeLineActive(line);
 		Subtitler.ContextMenu.show(
 			Subtitler.Lines.contextMenu,
 			e.clientX,
