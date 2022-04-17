@@ -693,7 +693,7 @@ Subtitler.Visualiser.__onPointerMove = function(e) {
 			
 			var pointerTimestamp = leftEdgeTimestamp + (percentageMoved * (rightEdgeTimestamp - leftEdgeTimestamp));
 			
-			var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId] || null;
+			var currentLine = Subtitler.Lines.getActiveLine();
 			var nextLine = null;
 			var previousLine = null;
 			
@@ -738,14 +738,14 @@ Subtitler.Visualiser.__onPointerUp = function(e) {
 			Subtitler.LineEditor.start.setAttribute('data-value', roundedTimestamp);
 			Subtitler.LineEditor.start.value = Subtitler.Formatting.formatTime(roundedTimestamp, 2);
 			Subtitler.LineEditor.start.dispatchEvent(new CustomEvent('value-modified', { bubbles: true, cancelable: true, detail: { value: roundedTimestamp }}));
-			Subtitler.Visualiser.renderLine(Subtitler.Lines.map[Subtitler.LineEditor.lineId] || null, true);
+			Subtitler.Visualiser.renderLine(Subtitler.Lines.getActiveLine() || null, true);
 		}
 		else if(Subtitler.Visualiser.__currentLineDraggedEdge.edge == 'end') {
 			var roundedTimestamp = Math.round(Subtitler.Visualiser.__currentLineDraggedEdge.timestamp * 100) / 100;
 			Subtitler.LineEditor.end.setAttribute('data-value', roundedTimestamp);
 			Subtitler.LineEditor.end.value = Subtitler.Formatting.formatTime(roundedTimestamp, 2);
 			Subtitler.LineEditor.end.dispatchEvent(new CustomEvent('value-modified', { bubbles: true, cancelable: true, detail: { value: roundedTimestamp }}));
-			Subtitler.Visualiser.renderLine(Subtitler.Lines.map[Subtitler.LineEditor.lineId] || null, true);
+			Subtitler.Visualiser.renderLine(Subtitler.Lines.getActiveLine(), true);
 		}
 	}
 	Subtitler.Visualiser.__currentLineDraggedEdge = null;
@@ -785,7 +785,7 @@ Subtitler.Visualiser.updateCurrentAudioTime = function() {
 }
 
 Subtitler.Visualiser.__getLines = function() {
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
+	var currentLine = Subtitler.Lines.getActiveLine();
 	var previousLine = (currentLine == null) ? null : (Subtitler.Lines.list[currentLine.lineno-1] || null);
 	var nextLine = (currentLine == null) ? null : (Subtitler.Lines.list[currentLine.lineno+1] || null);
 	return {

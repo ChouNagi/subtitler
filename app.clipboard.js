@@ -116,7 +116,8 @@ Subtitler.Clipboard.paste = function( insertionPoint, insertionMode) {
 			}
 		}
 		if(firstLineInserted) {
-			Subtitler.Lines.selectLine(firstLineInserted);
+			Subtitler.Lines.selectLines(linesToPaste, true);
+			Subtitler.Lines.makeLineActive(firstLineInserted);
 		}
 	}
 }

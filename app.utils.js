@@ -17,3 +17,7 @@ Subtitler.Utils.toHex2 = function( n ) {
 Subtitler.Utils.fromHex2 = function( string ) {
 	return parseInt( string, 16 );
 }
+
+Subtitler.Utils.fixFloatingPointErrors = function( number ) {
+	return (((number * 100000) | 0) / 100000);
+}

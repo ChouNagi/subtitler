@@ -153,8 +153,9 @@ Subtitler.Exporter.__convertToASS = function( ) {
 	
 	// TODO - Scroll Position: 39 (presumably which line is the first visible)
 	outputLines.push('Scroll Position: ' + scrollPosition);
-	if(Subtitler.Lines.map[Subtitler.LineEditor.lineId]) {
-		outputLines.push('Active Line: ' + Subtitler.Lines.map[Subtitler.LineEditor.lineId].lineno);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		outputLines.push('Active Line: ' + activeLine.lineno);
 	}
 	// TODO - video position (probably best to ignore this as it's the frame of the video)
 	outputLines.push('');

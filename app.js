@@ -502,10 +502,10 @@ Subtitler.Video.__updateLineDeltas = function( time ) {
 	if(newTimeHtml != existingTimeHtml) {
 		Subtitler.Video.timestamp.innerHTML = Subtitler.Formatting.formatTime(time, 3);
 	}
-	if(Subtitler.LineEditor.lineId != null && Subtitler.Lines.map[Subtitler.LineEditor.lineId]) {
-		var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine != null) {
 		
-		var lineStartDeltaInMillis = ((time - currentLine.start) * 1000) | 0;
+		var lineStartDeltaInMillis = ((time - activeLine.start) * 1000) | 0;
 		if(lineStartDeltaInMillis > 0) {
 			lineStartDeltaInMillis = '+' + lineStartDeltaInMillis + 'ms';
 		}
@@ -513,7 +513,7 @@ Subtitler.Video.__updateLineDeltas = function( time ) {
 			lineStartDeltaInMillis = '' + lineStartDeltaInMillis + 'ms';
 		}
 		
-		var lineEndDeltaInMillis = ((time - currentLine.end) * 1000) | 0;
+		var lineEndDeltaInMillis = ((time - activeLine.end) * 1000) | 0;
 		if(lineEndDeltaInMillis > 0) {
 			lineEndDeltaInMillis = '+' + lineEndDeltaInMillis + 'ms';
 		}
@@ -627,19 +627,18 @@ Subtitler.Video.Controls.Buttons.togglePlayPause.addEventListener('click', funct
 });
 
 Subtitler.Video.Controls.Buttons.playCurrentLine.addEventListener('click', function() {
-	var currentLineId = Subtitler.LineEditor.lineId;
-	var currentLine = Subtitler.Lines.map[currentLineId];
-	if(currentLine) {
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
 		Subtitler.Video.Controls.Buttons.togglePlayPause.classList.remove('toggled');
-		Subtitler.Video.__stopTime = currentLine.end - 0.03;
-		if(Subtitler.Video.isPlaying || Subtitler.Video.time != currentLine.start) {
-			Subtitler.Video.seek(currentLine.start, true);
-			Subtitler.Audio.play(currentLine.start, currentLine.end);
+		Subtitler.Video.__stopTime = activeLine.end - 0.03;
+		if(Subtitler.Video.isPlaying || Subtitler.Video.time != activeLine.start) {
+			Subtitler.Video.seek(activeLine.start, true);
+			Subtitler.Audio.play(activeLine.start, activeLine.end);
 			Subtitler.Video.Controls.Buttons.playCurrentLine.classList.add('toggled');
 		}
 		else {
 			Subtitler.Video.play();
-			Subtitler.Audio.play(currentLine.start, currentLine.end);
+			Subtitler.Audio.play(activeLine.start, activeLine.end);
 			Subtitler.Video.Controls.Buttons.playCurrentLine.classList.toggle('toggled', Subtitler.Video.isPlaying);
 		}
 	}
@@ -1134,9 +1133,9 @@ Subtitler.LineEditor.updateStylesDropdown = function() {
 		html += ('<div class="dropdown-item" data-value="' + style.name + '"><div class="dropdown-item-text">' + style.name + '</div></div>');
 	}
 	Subtitler.LineEditor.style.querySelector('.dropdown-contents').innerHTML = html;
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		Subtitler.LineEditor.style.dispatchEvent(new CustomEvent('set-value', { bubbles: true, cancelable: true, detail: { value: currentLine.style }}));
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		Subtitler.LineEditor.style.dispatchEvent(new CustomEvent('set-value', { bubbles: true, cancelable: true, detail: { value: activeLine.style }}));
 	}
 }
 
@@ -1159,21 +1158,23 @@ if(Subtitler.LineEditor.editStyle) {
 }
 
 Subtitler.LineEditor.previousLineButton.addEventListener('click', function() {
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		var previousLine = Subtitler.Lines.list[currentLine.lineno-1];
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		var previousLine = Subtitler.Lines.list[activeLine.lineno-1];
 		if(previousLine) {
-			Subtitler.Lines.selectLine(previousLine);
+			Subtitler.Lines.makeLineActive(previousLine);
+			Subtitler.Lines.selectLine(previousLine, true);
 		}
 	}
 });
 
 Subtitler.LineEditor.nextLineButton.addEventListener('click', function() {
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		var nextLine = Subtitler.Lines.list[currentLine.lineno+1];
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		var nextLine = Subtitler.Lines.list[activeLine.lineno+1];
 		if(nextLine) {
-			Subtitler.Lines.selectLine(nextLine);
+			Subtitler.Lines.makeLineActive(nextLine);
+			Subtitler.Lines.selectLine(nextLine, true);
 		}
 	}
 });
@@ -1187,39 +1188,44 @@ Subtitler.LineEditor.togglePlayButton.addEventListener('click', function() {
 		Subtitler.Audio.play();
 	}
 });
+
 Subtitler.LineEditor.playLineButton.addEventListener('click', function() {
 	Subtitler.Video.pause();
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		Subtitler.Audio.play(currentLine.start, currentLine.end);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		Subtitler.Audio.play(activeLine.start, activeLine.end);
 	}
 });
+
 Subtitler.LineEditor.play500msBeforeButton.addEventListener('click', function() {
 	Subtitler.Video.pause();
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		Subtitler.Audio.play(Math.max(0, currentLine.start-0.5), currentLine.start);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		Subtitler.Audio.play(Math.max(0, activeLine.start-0.5), activeLine.start);
 	}
 });
+
 Subtitler.LineEditor.playFirst500msButton.addEventListener('click', function() {
 	Subtitler.Video.pause();
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		Subtitler.Audio.play(currentLine.start, currentLine.start+0.5);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		Subtitler.Audio.play(activeLine.start, activeLine.start+0.5);
 	}
 });
+
 Subtitler.LineEditor.playLast500msButton.addEventListener('click', function() {
 	Subtitler.Video.pause();
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		Subtitler.Audio.play(Math.max(0, currentLine.end-0.5), currentLine.end);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		Subtitler.Audio.play(Math.max(0, activeLine.end-0.5), activeLine.end);
 	}
 });
+
 Subtitler.LineEditor.play500msAfterButton.addEventListener('click', function() {
 	Subtitler.Video.pause();
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		Subtitler.Audio.play(currentLine.end, currentLine.end+0.5);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		Subtitler.Audio.play(activeLine.end, activeLine.end+0.5);
 	}
 });
 
@@ -1234,11 +1240,11 @@ Subtitler.LineEditor.addLeadInButton.addEventListener('click', function() {
 	Subtitler.LineEditor.duration.value = Subtitler.Formatting.formatTime(duration, 2)
 	Subtitler.LineEditor.duration.setAttribute('data-value', duration+'');
 	
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.start = startTime;
-		currentLine.duration = duration;
-		Subtitler.Lines.updateLine(currentLine);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		activeLine.start = startTime;
+		activeLine.duration = duration;
+		Subtitler.Lines.updateLine(activeLine);
 	}
 });
 
@@ -1253,18 +1259,18 @@ Subtitler.LineEditor.addLeadOutButton.addEventListener('click', function() {
 	Subtitler.LineEditor.duration.value = Subtitler.Formatting.formatTime(duration, 2)
 	Subtitler.LineEditor.duration.setAttribute('data-value', duration+'');
 	
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.end = endTime;
-		currentLine.duration = duration;
-		Subtitler.Lines.updateLine(currentLine);
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		activeLine.end = endTime;
+		activeLine.duration = duration;
+		Subtitler.Lines.updateLine(activeLine);
 	}
 });
 
 Subtitler.LineEditor.confirmLineButton.addEventListener('click', function() {
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		var nextLine = Subtitler.Lines.list[currentLine.lineno+1];
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine) {
+		var nextLine = Subtitler.Lines.list[activeLine.lineno+1];
 		if(!nextLine) {
 			nextLine = Subtitler.Lines.insertNewLineAtEnd();
 		}
@@ -1274,116 +1280,148 @@ Subtitler.LineEditor.confirmLineButton.addEventListener('click', function() {
 
 Subtitler.LineEditor.style.addEventListener('value-modified', function() {
 	var value = Subtitler.LineEditor.style.getAttribute('data-value');
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.style = value;
-		Subtitler.Lines.updateLine(currentLine);
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		selectedLine.style = value;
+		Subtitler.Lines.updateLine(selectedLine);
+	}
+	if(Subtitler.Lines.selection.length > 0) {
 		Subtitler.Video.__updateVisibleSubtitles(true);
 	}
 });
+
 Subtitler.LineEditor.text_src.addEventListener('input', function() {
 	Subtitler.LineEditor.text_pretty.innerHTML = Subtitler.Formatting.prettify(Subtitler.LineEditor.text_src.value);
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.text_src = Subtitler.LineEditor.text_src.value;
-		Subtitler.Lines.updateLine(currentLine);
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		selectedLine.text_src = Subtitler.LineEditor.text_src.value;
+		Subtitler.Lines.updateLine(selectedLine);
+	}
+	if(Subtitler.Lines.selection.length > 0) {
 		Subtitler.Video.__updateVisibleSubtitles(true);
 	}
 });
+
 Subtitler.LineEditor.text_src.addEventListener('change', function() {
 	Subtitler.LineEditor.text_pretty.innerHTML = Subtitler.Formatting.prettify(Subtitler.LineEditor.text_src.value);
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.text_src = Subtitler.LineEditor.text_src.value;
-		Subtitler.Lines.updateLine(currentLine);
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		selectedLine.text_src = Subtitler.LineEditor.text_src.value;
+		Subtitler.Lines.updateLine(selectedLine);
+	}
+	if(Subtitler.Lines.selection.length > 0) {
 		Subtitler.Video.__updateVisibleSubtitles(true);
 	}
 });
+
 Subtitler.LineEditor.actor.addEventListener('input', function() {
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.actor = Subtitler.LineEditor.actor.value;
-		Subtitler.Lines.updateLine(currentLine);
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		selectedLine.actor = Subtitler.LineEditor.actor.value;
+		Subtitler.Lines.updateLine(selectedLine);
+	}
+	if(Subtitler.Lines.selection.length > 0) {
+		Subtitler.Video.__updateVisibleSubtitles(true);
 	}
 });
 
 Subtitler.LineEditor.start.addEventListener('value-modified', function(e) {
+	// change the start time of all selected lines and update end and duration accordingly
+	var activeLine = Subtitler.Lines.getActiveLine();
 	var start = Subtitler.LineEditor.start.getAttribute('data-value') * 1;
-	var end = Subtitler.LineEditor.end.getAttribute('data-value') * 1;
-	
-	if(start > end) {
-		end = start;
-		Subtitler.LineEditor.end.value = Subtitler.Formatting.formatTime(start, 2)
-		Subtitler.LineEditor.end.setAttribute('data-value', start+'');
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		var end = selectedLine.end;
+		
+		if(start > end) {
+			end = start;
+			if(selectedLine == activeLine) {
+				Subtitler.LineEditor.end.value = Subtitler.Formatting.formatTime(start, 2);
+				Subtitler.LineEditor.end.setAttribute('data-value', start+'');
+			}
+		}
+		
+		duration = Subtitler.Utils.fixFloatingPointErrors(end - start);
+		if(selectedLine == activeLine) {
+			Subtitler.LineEditor.duration.value = Subtitler.Formatting.formatTime(duration, 2);
+			Subtitler.LineEditor.duration.setAttribute('data-value', duration+'');
+		}
+		
+		selectedLine.start = start;
+		selectedLine.end = end;
+		selectedLine.duration = duration;
+		Subtitler.Lines.updateLine(selectedLine);
 	}
-	
-	duration = end - start;
-	Subtitler.LineEditor.duration.value = Subtitler.Formatting.formatTime(duration, 2)
-	Subtitler.LineEditor.duration.setAttribute('data-value', duration+'');
-	
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.start = start;
-		currentLine.end = end;
-		currentLine.duration = duration;
-		Subtitler.Lines.updateLine(currentLine);
-	}
+	Subtitler.Lines.__updateOverlappingLines(Subtitler.Lines.getActiveLine());
 });
 
 Subtitler.LineEditor.end.addEventListener('value-modified', function(e) {
-	var start = Subtitler.LineEditor.start.getAttribute('data-value') * 1;
+	// change the end time of all selected lines and update start and duration accordingly
+	var activeLine = Subtitler.Lines.getActiveLine();
 	var end = Subtitler.LineEditor.end.getAttribute('data-value') * 1;
-	
-	if(end < start) {
-		start = end;
-		Subtitler.LineEditor.start.value = Subtitler.Formatting.formatTime(end, 2)
-		Subtitler.LineEditor.start.setAttribute('data-value', end+'');
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		var start = selectedLine.start;
+		
+		if(end < start) {
+			start = end;
+			if(selectedLine == activeLine) {
+				Subtitler.LineEditor.start.value = Subtitler.Formatting.formatTime(end, 2);
+				Subtitler.LineEditor.start.setAttribute('data-value', end+'');
+			}
+		}
+		
+		duration = Subtitler.Utils.fixFloatingPointErrors(end - start);
+		if(selectedLine == activeLine) {
+			Subtitler.LineEditor.duration.value = Subtitler.Formatting.formatTime(duration, 2);
+			Subtitler.LineEditor.duration.setAttribute('data-value', duration+'');
+		}
+		
+		selectedLine.start = start;
+		selectedLine.end = end;
+		selectedLine.duration = duration;
+		Subtitler.Lines.updateLine(selectedLine);
 	}
-	
-	duration = end - start;
-	Subtitler.LineEditor.duration.value = Subtitler.Formatting.formatTime(duration, 2)
-	Subtitler.LineEditor.duration.setAttribute('data-value', duration+'');
-	
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.start = start;
-		currentLine.end = end;
-		currentLine.duration = duration;
-		Subtitler.Lines.updateLine(currentLine);
-	}
+	Subtitler.Lines.__updateOverlappingLines(Subtitler.Lines.getActiveLine());
 });
 
 Subtitler.LineEditor.duration.addEventListener('value-modified', function(e) {
-	var start = Subtitler.LineEditor.start.getAttribute('data-value') * 1;
+	// change the duration of all selected lines and update end accordingly
+	var activeLine = Subtitler.Lines.getActiveLine();
 	var duration = Subtitler.LineEditor.duration.getAttribute('data-value') * 1;
-	
-	var end = start + duration;
-	
-	Subtitler.LineEditor.end.value = Subtitler.Formatting.formatTime(end, 2)
-	Subtitler.LineEditor.end.setAttribute('data-value', end+'');
-	
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.start = start;
-		currentLine.end = end;
-		currentLine.duration = duration;
-		Subtitler.Lines.updateLine(currentLine);
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		var start = selectedLine.start;
+		var end = Subtitler.Utils.fixFloatingPointErrors(start + duration);
+		
+		if(selectedLine == activeLine) {
+			Subtitler.LineEditor.end.value = Subtitler.Formatting.formatTime(end, 2)
+			Subtitler.LineEditor.end.setAttribute('data-value', end+'');
+		}
+		
+		selectedLine.start = start;
+		selectedLine.end = end;
+		selectedLine.duration = duration;
+		Subtitler.Lines.updateLine(selectedLine);
 	}
+	Subtitler.Lines.__updateOverlappingLines(Subtitler.Lines.getActiveLine());
 });
 
 Subtitler.LineEditor.layer.addEventListener('value-modified', function(e) {
 	var value = Subtitler.LineEditor.layer.value | 0;
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.layer = value;
-		Subtitler.Lines.updateLine(currentLine);
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		selectedLine.layer = value;
+		Subtitler.Lines.updateLine(selectedLine);
 	}
 });
+
 Subtitler.LineEditor.isComment.addEventListener('change', function(e) {
-	var currentLine = Subtitler.Lines.map[Subtitler.LineEditor.lineId];
-	if(currentLine) {
-		currentLine.isComment = Subtitler.LineEditor.isComment.checked;
-		Subtitler.Lines.updateLine(currentLine);
+	var value = Subtitler.LineEditor.layer.value | 0;
+	for(var n=0; n<Subtitler.Lines.selection.length; n++) {
+		var selectedLine = Subtitler.Lines.selection[n];
+		selectedLine.isComment = Subtitler.LineEditor.isComment.checked;
+		Subtitler.Lines.updateLine(selectedLine);
 	}
 });
 
@@ -1434,6 +1472,7 @@ document.addEventListener('click', function() {
 Subtitler.Lines = { };
 Subtitler.Lines.list = [ ];
 Subtitler.Lines.map = { };
+Subtitler.Lines.selection = [ ];
 
 Subtitler.Lines.defaultLineDuration = 2;
 
@@ -1444,13 +1483,67 @@ Subtitler.Lines.insertLineAtEndButton = Subtitler.Lines.listElement.querySelecto
 
 Subtitler.Lines.__onLineClick = function(e) {
 	if(e.target && e.target.closest('.subtitle-list-element')) {
-		Subtitler.Lines.selectLine(e.target.closest('.subtitle-list-element').getAttribute('data-subtitle-id'));
+		
+		var ctrlHeld = e.ctrlKey || false;
+		var shiftHeld = e.shiftKey || false;
+		var lineId = e.target.closest('.subtitle-list-element').getAttribute('data-subtitle-id');
+		var line = Subtitler.Lines.getLine(lineId);
+		
+		var activeLine = Subtitler.Lines.getActiveLine();
+		var isAlreadySelected = Subtitler.Lines.isLineSelected(lineId);
+		
+		if(!shiftHeld && !ctrlHeld) {
+			Subtitler.Lines.selectLine(lineId, true);
+		}
+		else if(!shiftHeld && ctrlHeld && !isAlreadySelected) {
+			Subtitler.Lines.selectLine(lineId, false);
+		}
+		else if(!shiftHeld && ctrlHeld && isAlreadySelected) {
+			Subtitler.Lines.unselectLine(lineId);
+		}
+		else if(shiftHeld && !ctrlHeld) {
+			if(activeLine == null) {
+				Subtitler.Lines.selectLine(lineId, true);
+			}
+			else {
+				var linesToSelect = [ ];
+				var firstLineNo = Math.min(line.lineno, activeLine.lineno);
+				var lastLineNo = Math.max(line.lineno, activeLine.lineno);
+				lastLineNo = Math.min(lastLineNo, Subtitler.Lines.list.length - 1);
+				for(var n=firstLineNo; n<=lastLineNo; n++) {
+					linesToSelect.push(Subtitler.Lines.list[n]);
+				}
+				Subtitler.Lines.selectLines(linesToSelect, true);
+			}
+		}
+		else if(shiftHeld && ctrlHeld) {
+			if(activeLine == null) {
+				Subtitler.Lines.selectLine(lineId, false);
+			}
+			else {
+				var linesToSelect = [ ];
+				var firstLineNo = Math.min(line.lineno, activeLine.lineno);
+				var lastLineNo = Math.max(line.lineno, activeLine.lineno);
+				lastLineNo = Math.min(lastLineNo, Subtitler.Lines.list.length - 1);
+				for(var n=firstLineNo; n<=lastLineNo; n++) {
+					linesToSelect.push(Subtitler.Lines.list[n]);
+				}
+				Subtitler.Lines.selectLines(linesToSelect, false);
+			}
+		}
+		
+		Subtitler.Lines.makeLineActive(lineId);
 	}
 }
 Subtitler.Lines.listElement.addEventListener('click', Subtitler.Lines.__onLineClick);
 
 Subtitler.Lines.__onLineRightClick = function(e) {
 	if(e.target && e.target.closest('.subtitle-list-element')) {
+		var line = Subtitler.Lines.getLine(e.target.closest('.subtitle-list-element').getAttribute('data-subtitle-id'));
+		if(!Subtitler.Lines.isLineSelected(line)) {
+			Subtitler.Lines.selectLine(line, true);
+		}
+		Subtitler.Lines.makeLineActive(line);
 		Subtitler.ContextMenu.show(
 			Subtitler.Lines.contextMenu,
 			e.clientX,
@@ -1484,10 +1577,10 @@ Subtitler.Lines.contextMenu.querySelector('.webapp-context-menu-option-split-lin
 });
 
 Subtitler.Lines.contextMenu.querySelector('.webapp-context-menu-option-cut-line').addEventListener('click', function() {
-	Subtitler.Lines.cutLine(Subtitler.Lines.contextMenu.getAttribute('data-subtitle-id'));
+	Subtitler.Lines.cutLines(Subtitler.Lines.selection);
 });
 Subtitler.Lines.contextMenu.querySelector('.webapp-context-menu-option-copy-line').addEventListener('click', function() {
-	Subtitler.Lines.copyLine(Subtitler.Lines.contextMenu.getAttribute('data-subtitle-id'));
+	Subtitler.Lines.copyLines(Subtitler.Lines.selection);
 });
 Subtitler.Lines.contextMenu.querySelector('.webapp-context-menu-option-paste-line-before').addEventListener('click', function() {
 	Subtitler.Lines.pasteBefore(Subtitler.Lines.contextMenu.getAttribute('data-subtitle-id'));
@@ -1499,9 +1592,8 @@ Subtitler.Lines.contextMenu.querySelector('.webapp-context-menu-option-paste-lin
 	Subtitler.Lines.pasteOver(Subtitler.Lines.contextMenu.getAttribute('data-subtitle-id'));
 });
 Subtitler.Lines.contextMenu.querySelector('.webapp-context-menu-option-delete-line').addEventListener('click', function() {
-	Subtitler.Lines.deleteLine(Subtitler.Lines.contextMenu.getAttribute('data-subtitle-id'));
+	Subtitler.Lines.deleteLines(Subtitler.Lines.selection);
 });
-
 
 
 Subtitler.Lines.__insertNewLine = function( index, start, end, text, style, layer, actor, isComment ) {
@@ -1548,7 +1640,10 @@ Subtitler.Lines.__insertLine = function( index, newLine, select ) {
 		Subtitler.Lines.__checkIfActorPresent();
 	}
 	Subtitler.Lines.listElement.appendChild(Subtitler.Lines.insertLineAtEndButton); // move button to bottom
-	Subtitler.Lines.selectLine(Subtitler.LineEditor.lineId);
+	if(select) {
+		Subtitler.Lines.selectLine(newLine, true);
+		Subtitler.Lines.makeLineActive(newLine);
+	}
 	return newLine;
 }
 
@@ -1579,13 +1674,8 @@ Subtitler.Lines.insertNewLineAtEnd = function( ) {
 	return newLine;
 };
 
-Subtitler.Lines.insertNewLineBeforeLine = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+Subtitler.Lines.insertNewLineBeforeLine = function( lineOrId ) {
+	var line = Subtitler.Lines.getLine(lineOrId);
 	if(line) {
 		var previousLine = (line.lineno == 0) ? { end: 0 } : Subtitler.Lines.list[line.lineno-1];
 		if(previousLine) {
@@ -1596,13 +1686,9 @@ Subtitler.Lines.insertNewLineBeforeLine = function( line ) {
 		
 	}
 };
-Subtitler.Lines.insertNewLineAfterLine = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+
+Subtitler.Lines.insertNewLineAfterLine = function( lineOrId ) {
+	var line = Subtitler.Lines.getLine(lineOrId);
 	if(line) {
 		var nextLine = (line.lineno == Subtitler.Lines.list.length-1) ? { start: Infinity } : Subtitler.Lines.list[line.lineno+1];
 		if(nextLine) {
@@ -1627,17 +1713,12 @@ Subtitler.Lines.insertNewLineAtVideoTimeAtEnd = function( ) {
 	return newLine;
 }; 
 
-Subtitler.Lines.insertNewLineAtVideoTimeBeforeLine = function( line ) {
+Subtitler.Lines.insertNewLineAtVideoTimeBeforeLine = function( lineOrId ) {
 	// round to 2 decimal places
 	var videoTime = Subtitler.Video.time;
 	videoTime = (((videoTime * 100) | 0) / 100);
 	
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+	var line = Subtitler.Lines.getLine(lineOrId);
 	if(line) {
 		var lineStart = videoTime;
 		var lineEnd = Math.min(lineStart+Subtitler.Lines.defaultLineDuration, line.start);
@@ -1649,17 +1730,12 @@ Subtitler.Lines.insertNewLineAtVideoTimeBeforeLine = function( line ) {
 	}
 };
 
-Subtitler.Lines.insertNewLineAtVideoTimeAfterLine = function( line ) {
+Subtitler.Lines.insertNewLineAtVideoTimeAfterLine = function( lineOrId ) {
 	// round to 2 decimal places
 	var videoTime = Subtitler.Video.time;
 	videoTime = (((videoTime * 100) | 0) / 100);
 	
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+	var line = Subtitler.Lines.getLine(lineOrId);
 	if(line) {
 		var nextLine = (line.lineno == Subtitler.Lines.list.length-1) ? { start: Infinity } : Subtitler.Lines.list[line.lineno+1];
 		var lineStart = videoTime;
@@ -1680,29 +1756,19 @@ Subtitler.Lines.insertNewLineAtVideoTimeAfterLine = function( line ) {
 	}
 };
 
-Subtitler.Lines.duplicateLine = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+Subtitler.Lines.duplicateLine = function( lineOrId ) {
+	var line = Subtitler.Lines.getLine(lineOrId);
 	if(line) {
 		var newLine = Subtitler.Lines.__insertNewLine(line.lineno+1, line.start, line.end, line.text_src, line.style, line.layer, line.actor, line.isComment);
 		return newLine;
 	}
 };
 
-Subtitler.Lines.splitLineAtVideoTime = function( line ) {
+Subtitler.Lines.splitLineAtVideoTime = function( lineOrId ) {
 	var videoTime = Subtitler.Video.time;
 	videoTime = (((videoTime * 100) | 0) / 100);
 	
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+	var line = Subtitler.Lines.getLine(lineOrId);
 	if(line) {
 		if(videoTime <= line.start || videoTime >= line.end ) {
 			return;
@@ -1726,13 +1792,21 @@ Subtitler.Lines.splitLineAtVideoTime = function( line ) {
 	}
 };
 
-Subtitler.Lines.deleteLine = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
+Subtitler.Lines.deleteLines = function( lines ) {
+	if(lines) {
+		// use a copy incase someone passes in Subtitler.Lines.list or Subtitler.Lines.selection 
+		var copy = [ ];
+		for(var n=0; n<lines.length; n++) {
+			copy.push(lines[n]);
+		}
+		for(var n=0; n<copy.length; n++) {
+			Subtitler.Lines.deleteLine(copy[n]);
+		}
 	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
+}
+
+Subtitler.Lines.deleteLine = function( lineIdOrElement ) {
+	var line = Subtitler.Lines.getLine(lineIdOrElement);
 	if(line) {
 		Subtitler.Lines.list.splice(line.lineno, 1);
 		delete Subtitler.Lines.map[line.id];
@@ -1750,70 +1824,74 @@ Subtitler.Lines.deleteLine = function( line ) {
 			}
 		}
 	}
+	if(Subtitler.Lines.list.length == 0) {
+		// if we deleted the final line, insert a new line
+		Subtitler.Lines.__insertNewLine(0, 0, 5, '', Subtitler.Styles.DefaultStyle.name, 0);
+	}
+};
+
+Subtitler.Lines.cutLines = function( lines ) {
+	var linesToCut = [ ];
+	if(lines != null) {
+		for(var i=0; i<lines.length; i++) {
+			if(lines[i] != null) {
+				var line = Subtitler.Lines.getLine(lines[i]);
+				if(line != null) {
+					linesToCut.push(line);
+				}
+			}
+		}
+	}
+	Subtitler.Clipboard.cut(linesToCut);
 };
 
 Subtitler.Lines.cutLine = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
+	return Subtitler.Lines.cutLines([line]);
+};
+
+Subtitler.Lines.copyLines = function( lines ) {
+	var linesToCut = [ ];
+	if(lines != null) {
+		for(var i=0; i<lines.length; i++) {
+			if(lines[i] != null) {
+				var line = Subtitler.Lines.getLine(lines[i]);
+				if(line != null) {
+					linesToCut.push(line);
+				}
+			}
+		}
 	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
-	if(line) {
-		Subtitler.Clipboard.cut([line]);
-	}
+	Subtitler.Clipboard.copy(linesToCut);
 };
 
 Subtitler.Lines.copyLine = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
-	if(line) {
-		Subtitler.Clipboard.copy([line]);
-	}
+	return Subtitler.Lines.cutLines([line]);
 };
 
 Subtitler.Lines.pasteBefore = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
-	if(line) {
-		Subtitler.Clipboard.paste(line, 'before');
+	var insertionPoint = Subtitler.Lines.getLine(line);
+	if(insertionPoint) {
+		Subtitler.Clipboard.paste(insertionPoint, 'before');
 	}
 }
+
 Subtitler.Lines.pasteAfter = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
-	if(line) {
-		Subtitler.Clipboard.paste(line, 'after');
+	var insertionPoint = Subtitler.Lines.getLine(line);
+	if(insertionPoint) {
+		Subtitler.Clipboard.paste(insertionPoint, 'after');
 	}
 }
+
 Subtitler.Lines.pasteOver = function( line ) {
-	if(typeof line == 'string') {
-		line = Subtitler.Lines.map[line];
-	}
-	if(typeof line == 'number') {
-		line = Subtitler.Lines.list[line];
-	}
-	if(line) {
-		Subtitler.Clipboard.paste(line, 'over');
+	var insertionPoint = Subtitler.Lines.getLine(line);
+	if(insertionPoint) {
+		Subtitler.Clipboard.paste(insertionPoint, 'over');
 	}
 }
+
 Subtitler.Lines.pasteAtEnd = function( ) {
 	var line = Subtitler.Lines.list[Subtitler.Lines.list.length-1];
-	if(line) {
-		Subtitler.Clipboard.paste(line, 'after');
-	}
+	return Subtitler.Lines.pasteAfter(line);
 }
 
 
@@ -2767,7 +2845,11 @@ Subtitler.Lines.renderLines = function() {
 	return html.join('');
 }
 Subtitler.Lines.renderLine = function( line ) {
-	return '<div class="subtitle-list-element' + (line.isComment ? ' comment' : '') + '" data-subtitle-id="' + line.id + '">'
+	return '<div class="subtitle-list-element'
+					+ (line.isComment ? ' comment' : '')
+					+ (Subtitler.Lines.isLineSelected(line) ? ' currently-selected' : '')
+					+ (Subtitler.Lines.isLineActive(line) ? ' currently-active' : '')
+					+ '" data-subtitle-id="' + line.id + '">'
 			+ '<div class="subtitle-list-column-lineno"></div>'
 				+ '<div class="subtitle-list-data-columns">'
 					+ '<div class="subtitle-list-column-start">' + Subtitler.Formatting.formatTime(line.start, 2) + '</div>'
@@ -2780,27 +2862,16 @@ Subtitler.Lines.renderLine = function( line ) {
 			+ '</div>'
 		+ '</div>'
 }
+
 Subtitler.Lines.updateLine = function( lineOrLineId ) {
-	var lineId = null;
-	var line = null;
-	if(typeof lineOrLineId == 'string') {
-		lineId = lineOrLineId;
-		line = Subtitler.Lines[lineOrLineId];
-	}
-	else if(typeof lineOrLineId == 'object' && lineOrLineId.hasOwnProperty('id')) {
-		line = lineOrLineId;
-		lineId = line.id;
-	}
 	
-	if(lineId == null || line == null) {
-		return;
-	}
+	var line = Subtitler.Lines.getLine(lineOrLineId);
 	
 	this.__computeDuration(line);
 	this.__computeAlternateTextForms(line);
 	this.__computeCPS(line);
 	
-	var lineElement = Subtitler.Lines.listElement.querySelector('.subtitle-list-element[data-subtitle-id="' + lineId + '"]');
+	var lineElement = Subtitler.Lines.listElement.querySelector('.subtitle-list-element[data-subtitle-id="' + line.id + '"]');
 	
 	if(lineElement == null) {
 		return;
@@ -2826,7 +2897,11 @@ Subtitler.Lines.updateLine = function( lineOrLineId ) {
 	Subtitler.Visualiser.updateOverlay(line);
 }
 
-Subtitler.Lines.isSelected = function( lineIdOrElement ) {
+// given a line, line id, or element which represents a line, returns the line
+Subtitler.Lines.getLine = function( lineIdOrElement ) {
+	if(lineIdOrElement == null) {
+		return null;
+	}
 	var id = null;
 	if(lineIdOrElement instanceof HTMLElement && lineIdOrElement.hasAttribute('data-subtitle-id')) {
 		id = lineIdOrElement.getAttribute('data-subtitle-id');
@@ -2844,50 +2919,120 @@ Subtitler.Lines.isSelected = function( lineIdOrElement ) {
 		}
 	}
 	
-	if(Subtitler.LineEditor.lineId == null) {
-		return false;
-	}
-	
 	if(!id) {
-		return false;
+		return null;
 	}
 	
-	return (Subtitler.LineEditor.lineId == id);
+	var line = Subtitler.Lines.map[id] || null;
+	
+	return line;
 }
 
-Subtitler.Lines.selectLine = function( lineIdOrElement ) {
-	var id = null;
-	if(lineIdOrElement instanceof HTMLElement && lineIdOrElement.hasAttribute('data-subtitle-id')) {
-		id = lineIdOrElement.getAttribute('data-subtitle-id');
+// returns the line that's currently being edited in the LineEditor
+Subtitler.Lines.getActiveLine = function( ) {
+	return Subtitler.Lines.getLine(Subtitler.LineEditor.lineId);
+}
+
+// returns whether the line (or id) corresponds to the line currently being edited in the LineEditor
+Subtitler.Lines.isLineActive = function( lineIdOrElement ) {
+	var activeLine = Subtitler.Lines.getActiveLine();
+	if(activeLine == null){
+		return false;
 	}
-	else if(typeof lineIdOrElement == 'object' && lineIdOrElement.hasOwnProperty('id')) {
-		id = lineIdOrElement.id;
+	return (activeLine == Subtitler.Lines.getLine(lineIdOrElement));
+}
+
+// returns whether the line (or id) is one of the currently selected lines
+Subtitler.Lines.isLineSelected = function( lineIdOrElement ) {
+	var line = Subtitler.Lines.getLine(lineIdOrElement);
+	return (Subtitler.Lines.selection.indexOf(line) != -1);
+}
+
+Subtitler.Lines.__updateSelectedLines = function() {
+	var currentlySelected = this.listElement.querySelectorAll('.subtitle-list-element.currently-selected');
+	for(var c=0; c<currentlySelected.length; c++) {
+		currentlySelected[c].classList.remove('currently-selected');
 	}
-	else if(typeof lineIdOrElement == 'string') {
-		id = lineIdOrElement;
-	}
-	else if(typeof lineIdOrElement == 'number') {
-		var line = this.list[lineIdOrElement];
-		if(line) {
-			id = line.id;
+	
+	for(var s=0; s<this.selection.length; s++) {
+		var lineToSelect = this.selection[s];
+		var elementsToSelect = this.listElement.querySelectorAll('.subtitle-list-element[data-subtitle-id="' + lineToSelect.id + '"]');
+		for(var c=0; c<elementsToSelect.length; c++) {
+			elementsToSelect[c].classList.add('currently-selected');
 		}
 	}
-	
-	if(!id) {
+}
+
+Subtitler.Lines.selectLines = function( lineIdsOrElements, replace ) {
+	if(replace) {
+		Subtitler.Lines.selection = [ ];
+	}
+	if(lineIdsOrElements == null) {
 		return;
 	}
-	
-	var line = this.map[id];
+	for(var n=0; n<lineIdsOrElements.length; n++) {
+		Subtitler.Lines.selectLine(lineIdsOrElements[n], false, true);
+	}
+	Subtitler.Lines.__updateSelectedLines();
+}
+
+Subtitler.Lines.unselectLine = function( lineIdOrElement ) {
+	var line = Subtitler.Lines.getLine(lineIdOrElement);
+	if(line == null) {
+		return;
+	}
+	for(var s=0; s<Subtitler.Lines.selection.length; s++) {
+		if(Subtitler.Lines.selection[s].id == line.id) {
+			Subtitler.Lines.selection.splice(s, 1);
+			s -= 1;
+		}
+	}
+	Subtitler.Lines.__updateSelectedLines();
+}
+
+Subtitler.Lines.selectLine = function( lineIdOrElement, replace, skipClassChanges ) {
+	if(replace) {
+		Subtitler.Lines.selection = [ ];
+	}
+	var line = Subtitler.Lines.getLine(lineIdOrElement);
 	
 	if(line == null) {
 		return;
 	}
 	
-	var previouslySelectedLineId = Subtitler.LineEditor.lineId;
+	Subtitler.Lines.selection.push(line);
 	
-	var currentlySelected = this.listElement.querySelectorAll('.subtitle-list-element.currently-selected');
-	for(var c=0; c<currentlySelected.length; c++) {
-		currentlySelected[c].classList.remove('currently-selected');
+	if(!skipClassChanges) {
+		Subtitler.Lines.__updateSelectedLines();
+	}
+}
+
+Subtitler.Lines.__updateOverlappingLines = function(line) {
+	var overlapingLines = Subtitler.Lines.getOverlappingLines(line || Subtitler.Lines.getActiveLine());
+	
+	var linesAlreadyMarkedAsOverlapping = this.listElement.querySelectorAll('.subtitle-list-element.overlapping');
+	for(var i=0; i<linesAlreadyMarkedAsOverlapping.length; i++) {
+		linesAlreadyMarkedAsOverlapping[i].classList.remove('overlapping');
+	}
+	for(var i=0; i<overlapingLines.length; i++) {
+		var overlappingLineId = overlapingLines[i].id;
+		var toAddClass = this.listElement.querySelectorAll('.subtitle-list-element[data-subtitle-id="' + overlappingLineId + '"]');
+		for(var c=0; c<toAddClass.length; c++) {
+			toAddClass[c].classList.add('overlapping');
+		}
+	}
+}
+
+Subtitler.Lines.makeLineActive = function( lineIdOrElement ) {
+	
+	var line = Subtitler.Lines.getLine(lineIdOrElement);
+	if(line == null) {
+		return;
+	}
+	
+	var currentlyActive = this.listElement.querySelectorAll('.subtitle-list-element.currently-active');
+	for(var c=0; c<currentlyActive.length; c++) {
+		currentlyActive[c].classList.remove('currently-active');
 	}
 	
 	var currentlyOverlapping = this.listElement.querySelectorAll('.subtitle-list-element.overlapping');
@@ -2898,24 +3043,16 @@ Subtitler.Lines.selectLine = function( lineIdOrElement ) {
 	if(line.text_original == null) {
 		line.text_original = line.text_src || '';
 	}
-	if(id != Subtitler.LineEditor.lineId) {
+	if(Subtitler.Lines.isLineActive(line)) {
 		line.text_recent = line.text_src || '';
 	}
 	
-	var toSelect = this.listElement.querySelectorAll('.subtitle-list-element[data-subtitle-id="' + id + '"]');
-	for(var c=0; c<toSelect.length; c++) {
-		toSelect[c].classList.add('currently-selected');
+	var tomakeLineActive = this.listElement.querySelectorAll('.subtitle-list-element[data-subtitle-id="' + line.id + '"]');
+	for(var c=0; c<tomakeLineActive.length; c++) {
+		tomakeLineActive[c].classList.add('currently-active');
 	}
 	
-	var overlapingLines = Subtitler.Lines.getOverlappingLines(line);
-	
-	for(var i=0; i<overlapingLines.length; i++) {
-		var lineId = overlapingLines[i].id;
-		var toAddClass = this.listElement.querySelectorAll('.subtitle-list-element[data-subtitle-id="' + lineId + '"]');
-		for(var c=0; c<toAddClass.length; c++) {
-			toAddClass[c].classList.add('overlapping');
-		}
-	}
+	Subtitler.Lines.__updateOverlappingLines(line);
 	
 	Subtitler.LineEditor.start.setAttribute('data-value', line.start+'');
 	Subtitler.LineEditor.start.value = Subtitler.Formatting.formatTime(line.start, 2);
@@ -3515,14 +3652,28 @@ Subtitler.Storage = { };
 Subtitler.Storage.store = function(key, value) {
 	localStorage[key] = value;
 }
+Subtitler.Storage.storeJSON = function(key, value) {
+	return Subtitler.Storage.store(key, JSON.stringify(value));
+}
 Subtitler.Storage.load = function(key, defaultValue) {
 	if(localStorage.hasOwnProperty(key)) {
 		return localStorage[key];
 	}
 	return defaultValue;
 }
+Subtitler.Storage.loadJSON = function(key, defaultValue) {
+	if(localStorage.hasOwnProperty(key)) {
+		try {
+			return JSON.parse(localStorage[key]);
+		}
+		catch(e) {
+			return defaultValue;
+		}
+	}
+	return defaultValue;
+}
 Subtitler.Storage.clear = function(key) {
-	// 
+	delete localStorage[key];
 }
 
 Subtitler.Storage.Files = { };
@@ -3530,29 +3681,24 @@ Subtitler.Storage.Files.root = [ ];
 Subtitler.Storage.Files.map = { };
 
 Subtitler.Storage.Files.init = function() {
-	var fileStructure = Subtitler.Storage.load('Subtitler.Storage.Files', '{ }');
-	for(var id in fileStructure) {
-		var file = fileStructure[id];
-		Subtitler.Storage.Files.map[id] = file;
-	}
+	Subtitler.Storage.Files.__readAll();
 }
 
 Subtitler.Storage.Files.createFolder = function(parent, folderName) {
 	
 	var folder = {
 		'filename': folderName,
-		'modified': new Date().getTime(),
-		'isFolder': true
+		'isFolder': true,
+		'contents': [ ]
 	}
 	
-	Subtitler.Storage.Files.__create(folder, parent);
+	return Subtitler.Storage.Files.__save(parent, folder);
 }
 
 Subtitler.Storage.Files.createFile = function(parent, filename, filecontents, mimetype) {
 	
 	var file = {
 		'filename': filename,
-		'modified': new Date().getTime(),
 		'data': filecontents,
 		'isFolder': false
 	};
@@ -3561,25 +3707,146 @@ Subtitler.Storage.Files.createFile = function(parent, filename, filecontents, mi
 		file.mimetype = mimetype;
 	}
 	
-	Subtitler.Storage.Files.__create(file, parent);
+	return Subtitler.Storage.Files.__save(parent, file);
 }
 
-Subtitler.Storage.Files.__create = function(fileOrFolder, parent) {
+Subtitler.Storage.Files.__save = function(parent, fileOrFolder) {
+	Subtitler.Storage.Files.__readAll();
+	if(typeof parent === 'string') {
+		parent = Subtitler.Storage.Files.map[parent];
+		if(parent == null || !parent.isFolder) {
+			return null;
+		}
+	}
 	if(fileOrFolder.id == null) {
 		fileOrFolder.id = Subtitler.Utils.uuid();
 	}
 	if(!fileOrFolder.isFolder && fileOrFolder.mimetype == null) {
-		// TODO - infer mimetype
+		var fileType = Subtitler.FileTypes.fromFileExtension(fileOrFolder.name);
+		if(fileType != null) {
+			fileOrFolder.mimetype = Subtitler.FileTypes.toMimeType(fileType);
+		}
+	}
+	
+	var now = new Date().getTime();
+	if(fileOrFolder.created == null) {
+		fileOrFolder.created = now;
+	}
+	fileOrFolder.modified = now;
+	
+	// remove from existing parent's contents
+	if(fileOrFolder.parent != null) {
+		fileOrFolder.parent.contents = fileOrFolder.parent.contents || [ ];
+		for(var c=0; c<parent.contents.length; c++) {
+			var item = parent.contents[c];
+			if(item.id == fileOrFolder.id) {
+				parent.contents.splice(c, 1);
+			}
+		}
+	}
+	
+	if(parent == null) {
+		fileOrFolder.parent = null;
+		var present = false;
+		for(var f=0; f<Subtitler.Storage.Files.root.length; f++) {
+			var item = Subtitler.Storage.Files.root[f];
+			if(item.id == fileOrFolder.id) {
+				present = true;
+			}
+		}
+		if(!present) {
+			Subtitler.Storage.Files.root.push(fileOrFolder);
+		}
+		Subtitler.Storage.Files.root.sort(function(a, b) {
+			if(a.name < b.name) {
+				return -1;
+			}
+			if(a.name > b.name) {
+				return 1;
+			}
+			return 0;
+		});
+	}
+	else {
+		fileOrFolder.parent = parent.id;
+		parent.contents = parent.contents || [ ];
+		var present = false;
+		for(var f=0; f<parent.contents.length; f++) {
+			var item = parent.contents[f];
+			if(item.id == fileOrFolder.id) {
+				present = true;
+			}
+		}
+		if(!present) {
+			parent.contents.push(fileOrFolder);
+		}
+		parent.contents.sort(function(a, b) {
+			if(a.name < b.name) {
+				return -1;
+			}
+			if(a.name > b.name) {
+				return 1;
+			}
+			return 0;
+		});
+	}
+	Subtitler.Storage.Files.map[fileOrFolder.id] = fileOrFolder;
+	if(Subtitler.Storage.Files.__writeAll()) {
+		return fileOrFolder;
+	}
+	return null;
+}
+
+Subtitler.Storage.Files.__readAll = function() {
+	var root = Subtitler.Storage.loadJSON('Subtitler.Storage.Files', [ ]);
+	Subtitler.Storage.Files.map = { };
+	Subtitler.Storage.Files.__readAllRecursive(root);
+	Subtitler.Storage.Files.root = root;
+}
+
+Subtitler.Storage.Files.__readAllRecursive = function(files) {
+	for(var f=0; f<files.length; f++) {
+		var file = files[f];
+		Subtitler.Storage.Files.map[file.id] = file;
+		if(file.isFolder && file.contents) {
+			Subtitler.Storage.Files.__readAllRecursive(file.contents);
+		}
+	}
+	return true;
+}
+
+Subtitler.Storage.Files.__writeAll = function() {
+	try {
+		Subtitler.Storage.storeJSON('Subtitler.Storage.Files', Subtitler.Storage.Files.root);
+		return true;
+	}
+	catch(e) {
+		return false;
 	}
 }
 
-Subtitler.Storage.loadFile = function(id) {
-	// TODO - retrieve from localstorage and pass to Subtitler.Importer.fromJSON
-}
-Subtitler.Storage.clearFile = function(id) {
-	// TODO - delete from localstorage
+Subtitler.Storage.Files.moveFile = function( newParent, fileOrFolderOrId ) {
+	if(typeof fileOrFolderOrId === 'string') {
+		fileOrFolderOrId = Subtitler.Storage.Files.map[id];
+		if(fileOrFolderOrId == null) {
+			return null;
+		}
+	}
+	if(typeof newParent === 'string') {
+		newParent = Subtitler.Storage.Files.map[newParent];
+		if(newParent == null || !newParent.isFolder) {
+			return null;
+		}
+	}
+	return Subtitler.Storage.Files.__save(newParent, fileOrFolderOrId);
 }
 
+
+Subtitler.Storage.deleteFile = function(id) {
+	// TODO - delete from storage
+}
+
+Subtitler.Storage.Files.init();
 
 var lastResizeCallback = new Date().getTime();
 var redrawSubtitleTimeout = null;

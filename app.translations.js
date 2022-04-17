@@ -93,12 +93,12 @@ Subtitler.Translations['en'] = {
 	lineContextMenuInsertAtVideoTimeAfter: 'Insert at video time (after)',
 	lineContextMenuDuplicateLine: 'Duplicate Line',
 	lineContextMenuSplitLineAtVideoTime: 'Split Line at video time',
-	lineContextMenuCopyLine: 'Copy Line',
-	lineContextMenuCutLine: 'Cut Line',
-	lineContextMenuPasteLineBefore: 'Paste Line (before)',
-	lineContextMenuPasteLineAfter: 'Paste Line (after)',
-	lineContextMenuPasteLineOver: 'Paste Line (over)',
-	lineContextMenuDeleteLine: 'Delete Line',
+	lineContextMenuCopyLine: 'Copy Lines',
+	lineContextMenuCutLine: 'Cut Lines',
+	lineContextMenuPasteLineBefore: 'Paste Lines (before)',
+	lineContextMenuPasteLineAfter: 'Paste Lines (after)',
+	lineContextMenuPasteLineOver: 'Paste Lines (over)',
+	lineContextMenuDeleteLine: 'Delete Lines',
 	
 	aboutPopupTitle: 'About',
 	aboutPopupMessage: 'Despite the similarities in appearance and function, this webapp is not affiliated with Aegisub, nor does it share any code with Aegisub. (In retrospect if it did, I\'d have saved several days on the spectrogram and it\'d work a lot better). Even ignoring the multiple bugs and unfinished state of the webapp, for most purposes the finished webapp will be objectively inferior to Aegisub due to the limitations of html+javascript. If you have the opportunity, I\'d highly recommend installing Aegisub and using that instead.\n\nThis webapp is open source, and the source code is hosted on github if for some reason you want to help, make your own copy, or question my sanity.',
@@ -399,6 +399,7 @@ Subtitler.Translations['en'] = {
 	webappDummyVideoPopupButtonOK: 'OK',
 	webappDummyVideoPopupButtonCancel: 'Cancel',
 	
+	
 	webappShiftTimingPopupTitle: 'Shift Timing',
 	webappShiftTimingPopupTime: 'Time',
 	webappShiftTimingPopupFrame: 'Frame',
@@ -417,6 +418,15 @@ Subtitler.Translations['en'] = {
 	
 	webappShiftTimingPopupButtonCancel: 'Cancel',
 	webappShiftTimingPopupButtonApply: 'Apply',
+	
+	
+	webappFileBrowserPopupTitleBrowse: 'Browse',
+	webappFileBrowserPopupTitleSave: 'Save',
+	webappFileBrowserPopupStorage: 'Storage',
+	
+	webappFileBrowserPopupButtonCancel: 'Cancel',
+	webappFileBrowserPopupButtonOpen: 'Open',
+	webappFileBrowserPopupButtonSave: 'Save',
 }
 
 

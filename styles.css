@@ -496,6 +496,7 @@ html.supports-hover .dropdown-handle:hover::before {
 .subtitle-list-element {
   cursor: pointer;
   counter-increment: lineno;
+  position: relative;
 }
 html.supports-hover .subtitle-list-element:hover {
   background-color: #dfc;
@@ -510,6 +511,21 @@ html.supports-hover .subtitle-list-element:hover {
 	display: flex;
 	flex: 1;
 	overflow: hidden;
+}
+
+.subtitle-list-element.currently-active::before {
+  content: "";
+  display: block;
+  position: absolute;
+  border-width: 1px;
+  height: calc(100% + 2px);
+  box-sizing: border-box;
+  top: -1px;
+  border-style: solid;
+  border-color: purple;
+  width: 100%;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .subtitle-list-column-lineno,
@@ -2267,4 +2283,45 @@ html.supports-hover .insert-new-line-row:hover {
 	background-color: white;
 	border: 1px solid #999;
 	height: 25px;
+}
+
+.filebrowser-popup .popup {
+	width: calc(100vw - 50px);
+}
+
+.filebrowser-control-bar {
+	display: flex;
+	cursor: default;
+}
+.filebrowser-up-one-level-button {
+  width: 24px;
+  height: 24px;
+}
+.filebrowser-address-bar {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	background-color: white;
+	border-bottom: 1px solid #999;
+	border-left: 1px solid #999;
+	user-select: none;
+	font-size: 12px;
+}
+.path-segment {
+	padding: 5px 5px 5px 6px;
+	border-right: 1px solid white;
+	background-color: white;
+}
+.path-segment:not(:first-child) {
+	padding-right: 5px;
+	border-left: 1px solid white;
+}
+html.supports-hover .path-segment:hover {
+	background-color: #def;
+	border-color: #cde;
+}
+.path-segment:not(:last-child)::after {
+	content: "/";
+	opacity: 0.33;
+	margin-left: 6px;
 }
